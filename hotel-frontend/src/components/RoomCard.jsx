@@ -1,0 +1,34 @@
+import React from 'react';
+import { formatPriceINR } from '../utils/formatCurrency';
+
+const RoomCard = ({ room, onBookRoom }) => {
+  if (!room) return null;
+
+  return (
+    <div className="room-card">
+      <div>
+        <div className="room-card-header">
+          <span className="room-number">Room {room.number}</span>
+          <span className="room-type-badge">{room.type}</span>
+        </div>
+        <div className="room-details">
+          <p><strong>Capacity:</strong> {room.capacity} {room.capacity === 1 ? 'Guest' : 'Guests'}</p>
+        </div>
+      </div>
+      <div>
+        <div className="room-price-tag">
+          {formatPriceINR(room.price)} <span>/ night</span>
+        </div>
+        <button
+          type="button"
+          className="btn-book-room"
+          onClick={() => onBookRoom && onBookRoom(room)}
+        >
+          Book Room
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default RoomCard;
