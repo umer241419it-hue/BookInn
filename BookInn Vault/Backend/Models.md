@@ -1,150 +1,46 @@
-# Backend — Models
+# Data Models
 
 ## Purpose
-This document details the Mongoose schemas and data models defining the database collection structures in **BookInn**.
+This document specifies the Mongoose schema structures implemented in `hotel-backend/models/`.
 
 ---
 
-## What is Currently Implemented
+## Model Specifications
 
-The application implements two data models:
-1. `Room` (`models/Room.js`)
-2. `Booking` (`models/Booking.js`)
-
----
-
-## 1. Room Model (`models/Room.js`)
-
+### 1. User Model (`User.js`)
 ```javascript
-const mongoose = require("mongoose");
-
-const roomSchema = new mongoose.Schema(
-  {
-    number: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    type: {
-      type: String,
-      required: true,
-    },
-    price: {
-      type: Number,
-      required: true,
-    },
-    capacity: {
-      type: Number,
-      required: true,
-    },
-  },
-  { timestamps: true }
-);
-
-module.exports = mongoose.model("Room", roomSchema);
+{
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true, lowercase: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: ["user", "admin"], default: "user" },
+  timestamps: true
+}
 ```
+- **Pre-save Hook**: Hashes plaintext password using `bcryptjs` (salt factor 10).
+- **Methods**: `matchPassword(enteredPassword)`.
 
-### Fields & Constraints:
-- `number`: `String`, required, unique index enforced (`unique: true`).
-- `type`: `String`, required (e.g., `"Deluxe"`, `"Single"`).
-- `price`: `Number`, required (static price per night).
-- `capacity`: `Number`, required (max guests).
-- `timestamps`: Automatically adds `createdAt` and `updatedAt` Date fields.
-
----
-
-## 2. Booking Model (`models/Booking.js`)
-
+### 2. Booking Model (`Booking.js`)
 ```javascript
-const mongoose = require("mongoose");
-
-const bookingSchema = new mongoose.Schema(
-  {
-    roomId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Room",
-      required: true,
-    },
-    guestName: {
-      type: String,
-      required: true,
-    },
-    guestPhone: {
-      type: String,
-      required: true,
-    },
-    checkIn: {
-      type: Date,
-      required: true,
-    },
-    checkOut: {
-      type: Date,
-      required: true,
-      validate: {
-        validator: function (value) {
-          return value > this.checkIn;
-        },
-        message: "checkOut must be after checkIn",
-      },
-    },
-    status: {
-      type: String,
-      default: "confirmed",
-    },
-  },
-  { timestamps: true }
-);
-
-module.exports = mongoose.model("Booking", bookingSchema);
+{
+  roomId: { type: mongoose.Schema.Types.ObjectId, ref: "Room", required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  guestName: { type: String, required: true },
+  guestPhone: { type: String, required: true },
+  checkIn: { type: Date, required: true },
+  checkOut: { type: Date, required: true },
+  status: { type: String, default: "confirmed" },
+  timestamps: true
+}
 ```
 
-### Fields & Constraints:
-- `roomId`: `Schema.Types.ObjectId`, required, references `Room` model (`ref: "Room"`).
-- `guestName`: `String`, required.
-- `guestPhone`: `String`, required.
-- `checkIn`: `Date`, required.
-- `checkOut`: `Date`, required, custom schema validator checking `value > this.checkIn` (returns message `"checkOut must be after checkIn"`).
-- `status`: `String`, default value `"confirmed"`.
-- `timestamps`: Automatically adds `createdAt` and `updatedAt` Date fields.
-
----
-
-## Model Relationships
-
-```mermaid
-erDiagram
-    ROOM {
-        ObjectId _id PK
-        String number UK
-        String type
-        Number price
-        Number capacity
-        Date createdAt
-        Date updatedAt
-    }
-
-    BOOKING {
-        ObjectId _id PK
-        ObjectId roomId FK
-        String guestName
-        String guestPhone
-        Date checkIn
-        Date checkOut
-        String status
-        Date createdAt
-        Date updatedAt
-    }
-
-    ROOM ||--o{ BOOKING : "has many"
+### 3. Room Model (`Room.js`)
+```javascript
+{
+  number: { type: String, required: true, unique: true },
+  type: { type: String, required: true },
+  price: { type: Number, required: true },
+  capacity: { type: Number, required: true },
+  timestamps: true
+}
 ```
-
----
-
-## Important Files Involved
-- [models/Room.js](file:///c:/Users/kadiw/OneDrive/Desktop/BookInn/models/Room.js)
-- [models/Booking.js](file:///c:/Users/kadiw/OneDrive/Desktop/BookInn/models/Booking.js)
-
----
-
-## Dependencies
-- `mongoose`

@@ -1,66 +1,66 @@
 # Folder Structure
 
 ## Purpose
-This page maps out the physical folder and file organization of the **BookInn** backend repository.
+This page maps out the physical folder and file organization of the **BookInn** system, covering both `hotel-backend` and `hotel-frontend`.
 
 ---
 
-## What is Currently Implemented
+## Workspace Layout
 
 Below is the complete tree layout of the project root directory:
 
 ```
 BookInn/
 │
-├── config/
-│   └── db.js                 # MongoDB connection setup using Mongoose
+├── hotel-backend/             # Express.js REST API Backend
+│   ├── config/
+│   │   └── db.js              # MongoDB connection setup using Mongoose
+│   ├── controllers/
+│   │   ├── authController.js  # JWT signup & login handlers
+│   │   ├── bookingController.js# Booking logic & ownership enforcement
+│   │   └── roomController.js   # Room catalog & availability search
+│   ├── middleware/
+│   │   ├── auth.js            # protect & adminOnly JWT authorization
+│   │   └── errorHandler.js    # Global error handler
+│   ├── models/
+│   │   ├── Booking.js         # Booking entity schema (refs Room & User)
+│   │   ├── Room.js            # Room entity schema
+│   │   └── User.js            # User schema with bcrypt password hashing
+│   ├── routes/
+│   │   ├── authRoutes.js      # /api/auth routes
+│   │   ├── bookingRoutes.js   # /api/bookings routes
+│   │   └── roomRoutes.js      # /api/rooms routes
+│   ├── utils/
+│   │   └── availability.js    # Shared date overlap helper
+│   ├── .env                   # Environment variables (PORT, MONGO_URI, JWT_SECRET)
+│   ├── .env.example           # Sample environment template
+│   ├── package.json           # Backend dependencies
+│   └── server.js              # Express app entry point
 │
-├── controllers/
-│   ├── bookingController.js   # Request handlers for /api/bookings endpoints
-│   └── roomController.js      # Request handlers for /api/rooms endpoints
+├── hotel-frontend/            # React + Vite Client Application
+│   ├── src/
+│   │   ├── api/
+│   │   │   ├── bookings.js    # Axios API helpers for bookings
+│   │   │   └── rooms.js       # Axios API helpers for rooms
+│   │   ├── components/
+│   │   │   ├── BookingModal.jsx# Modal form for confirming room booking
+│   │   │   ├── FilterBar.jsx   # Icon-triggered room filter popup panel
+│   │   │   ├── RoomCard.jsx   # Individual room card display
+│   │   │   ├── RoomGrid.jsx   # Auto-fit grid container
+│   │   │   ├── SearchForm.jsx # Check-in/check-out search form
+│   │   │   └── Sidebar.jsx    # Persistent left nav / mobile drawer
+│   │   ├── pages/
+│   │   │   ├── BookingsPage.jsx# User/Admin reservations view
+│   │   │   └── SearchPage.jsx # Main stateful search & filter page
+│   │   ├── utils/
+│   │   │   └── formatCurrency.js# INR currency formatting helper
+│   │   ├── App.jsx            # Main app shell & React Router routes
+│   │   ├── main.jsx           # React DOM entry point
+│   │   └── index.css          # Hospitality design system & CSS variables
+│   ├── index.html             # Client HTML root
+│   ├── package.json           # Frontend dependencies
+│   └── vite.config.js         # Vite config with backend proxy (/api)
 │
-├── middleware/
-│   └── errorHandler.js       # Central error handling middleware
-│
-├── models/
-│   ├── Booking.js            # Mongoose schema and model for Booking entity
-│   └── Room.js               # Mongoose schema and model for Room entity
-│
-├── routes/
-│   ├── bookingRoutes.js      # Express router mapping /api/bookings routes
-│   └── roomRoutes.js         # Express router mapping /api/rooms routes
-│
-├── utils/
-│   └── availability.js       # Shared date overlap detection utility
-│
-├── BookInn Vault/            # Obsidian Documentation Knowledge Base
-│   ├── Home.md
-│   └── ...
-│
-├── .env                      # Local environment configurations (ignored by git)
-├── .env.example              # Sample environment template
-├── .gitignore                # Git exclusion file
-├── package.json              # NPM manifest & script definitions
-├── package-lock.json         # Locked dependency tree
-└── server.js                 # Application bootstrap entry point
+├── BookInn Vault/             # Obsidian Technical Documentation Base
+└── .gitignore                 # Workspace exclusion file
 ```
-
----
-
-## Directory Descriptions
-
-| Directory | Purpose | Key Files |
-|---|---|---|
-| `config/` | Environment & database initialization | `db.js` |
-| `controllers/` | HTTP request processing and response formatting | `roomController.js`, `bookingController.js` |
-| `middleware/` | Global application middleware | `errorHandler.js` |
-| `models/` | Database collection schemas & data validation | `Room.js`, `Booking.js` |
-| `routes/` | HTTP endpoint definitions & router mounting | `roomRoutes.js`, `bookingRoutes.js` |
-| `utils/` | Decoupled domain helper logic | `availability.js` |
-| `BookInn Vault/` | System technical documentation in Markdown | Vault files |
-
----
-
-## Notes
-- All backend functional modules are contained within `config`, `controllers`, `middleware`, `models`, `routes`, and `utils`.
-- There is no `src/`, `public/`, or client-side frontend folder in the workspace.

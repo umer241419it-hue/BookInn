@@ -1,80 +1,24 @@
-# Backend — Middleware
+# Middleware
 
 ## Purpose
-This document records middleware functions used in the **BookInn** application.
+This document records custom and global middleware modules used in `hotel-backend`.
 
 ---
 
-## What is Currently Implemented
+## Active Middleware
 
-The application utilizes three middleware functions:
-1. `cors()` — Cross-Origin Resource Sharing.
-2. `express.json()` — Body parser for JSON request payloads.
-3. `middleware/errorHandler.js` — Custom centralized error handler.
+### 1. Auth Guard Middleware (`middleware/auth.js`)
+- `protect`: Extracts `Bearer <token>` from HTTP Authorization header. Decodes JWT using `JWT_SECRET` and populates `req.user = { id: decoded.id, role: decoded.role }`. Returns `401 Unauthorized` if token is missing or invalid.
+- `adminOnly`: Inspects `req.user.role === 'admin'`. Passes execution to next handler if true; returns `403 Forbidden` otherwise.
 
----
-
-## 1. Global Pre-Routing Middleware (`server.js`)
-
-```javascript
-app.use(cors());
-app.use(express.json());
-```
-- `cors()` allows frontend applications hosted on different domains/ports to execute HTTP requests against this server.
-- `express.json()` populates `req.body` with parsed JSON payloads for `POST` requests.
-
----
-
-## 2. Centralized Error Handler (`middleware/errorHandler.js`)
-
-```javascript
-/**
- * Central error-handling middleware.
- *
- * Express recognises a middleware with 4 params as an error handler.
- * Any time you call next(error) in a controller, Express skips to here.
- */
-const errorHandler = (err, req, res, next) => {
-  // Mongoose validation errors come with err.name === 'ValidationError'
-  // Mongoose cast errors (bad ObjectId) come with err.name === 'CastError'
-  // For now, a simple handler — you can refine this later.
-
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-
-  res.status(statusCode).json({
-    success: false,
-    message: err.message || "Server Error",
-    // Only show the stack trace in development
-    stack: process.env.NODE_ENV === "production" ? undefined : err.stack,
-  });
-};
-
-module.exports = errorHandler;
-```
-
----
-
-## How It Works
-- Express identifies `errorHandler` as error handling middleware because it accepts **4 parameters**: `(err, req, res, next)`.
-- If a route handler invokes `next(error)`, Express bypasses subsequent route handlers and delegates control to `errorHandler`.
-- It evaluates `res.statusCode`. If `200`, it defaults to `500`.
-- It returns JSON formatted as:
+### 2. Global Error Handler (`middleware/errorHandler.js`)
+- Catches unhandled application errors and formats standard JSON error payload:
   ```json
   {
-    "success": false,
-    "message": "Error details",
-    "stack": "Stack trace (only if NODE_ENV !== 'production')"
+    "error": "Error description message"
   }
   ```
 
----
-
-## Important Files Involved
-- [middleware/errorHandler.js](file:///c:/Users/kadiw/OneDrive/Desktop/BookInn/middleware/errorHandler.js)
-- [server.js](file:///c:/Users/kadiw/OneDrive/Desktop/BookInn/server.js)
-
----
-
-## Dependencies
-- `express`
-- `cors`
+### 3. Built-in & Third-Party Middleware
+- `cors()`: Enables cross-origin HTTP requests.
+- `express.json()`: Parses incoming JSON payload bodies.

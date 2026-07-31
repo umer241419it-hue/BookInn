@@ -1,14 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import SearchForm from '../components/SearchForm';
 import FilterBar from '../components/FilterBar';
 import RoomGrid from '../components/RoomGrid';
 import BookingModal from '../components/BookingModal';
 import { getAllRooms, getAvailableRooms } from '../api/rooms';
+import { useAuth } from '../context/AuthContext';
 
 const SearchPage = () => {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const { isLoggedIn } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Active search date range
   const [searchDates, setSearchDates] = useState({ checkIn: '', checkOut: '' });
@@ -55,8 +61,16 @@ const SearchPage = () => {
     }
   };
 
+  const handleBookingClick = (room) => {
+    if (!isLoggedIn) {
+      // Redirect logged-out user to login page
+      navigate('/login', { state: { from: location } });
+      return;
+    }
+    setSelectedRoom(room);
+  };
+
   const handleBookingSuccess = () => {
-    // Re-fetch room list to update available rooms
     if (searchDates.checkIn && searchDates.checkOut) {
       handleSearch(searchDates.checkIn, searchDates.checkOut);
     } else {
@@ -64,14 +78,12 @@ const SearchPage = () => {
     }
   };
 
-  // Dynamically derive distinct room types from current rooms array
   const roomTypes = useMemo(() => {
     if (!rooms || rooms.length === 0) return [];
     const types = rooms.map((room) => room.type).filter(Boolean);
     return Array.from(new Set(types));
   }, [rooms]);
 
-  // Client-side filtering of rooms
   const filteredRooms = useMemo(() => {
     return rooms.filter((room) => {
       if (selectedType !== 'All' && room.type !== selectedType) {
@@ -119,7 +131,7 @@ const SearchPage = () => {
       {loading ? (
         <div className="loading-state">Loading rooms...</div>
       ) : (
-        <RoomGrid rooms={filteredRooms} onBookRoom={(room) => setSelectedRoom(room)} />
+        <RoomGrid rooms={filteredRooms} onBookRoom={handleBookingClick} />
       )}
 
       {selectedRoom && (

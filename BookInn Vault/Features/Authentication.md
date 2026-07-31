@@ -1,24 +1,45 @@
-# Features — Authentication
+# Authentication & Role-Based Access Control (RBAC)
 
 ## Purpose
-This document details user authentication and authorization mechanisms in **BookInn**.
+This document details the authentication mechanism, user management, and security controls enforced in the **BookInn** system.
 
 ---
 
-## What is Currently Implemented
+## Status: Implemented
 
-> [!IMPORTANT]
-> **Status: Not Implemented**
-> 
-> There is **no authentication or authorization middleware** (such as JWT, Sessions, Passport, OAuth, or bcrypt password hashing) in the current codebase.
+Authentication is fully functional on the backend via JSON Web Tokens (JWT) and `bcryptjs` password hashing.
 
 ---
 
-## Current Access Model
-- All REST API endpoints (`/api/rooms`, `/api/bookings`) are publicly accessible without API keys or authentication headers.
-- CORS middleware (`cors()`) is configured globally in [[Backend/Server|server.js]].
+## Implementation Overview
+
+### 1. User Entity (`User.js`)
+- `name`: Full name of the user.
+- `email`: Unique email address used for login.
+- `password`: Hashed string (never saved or returned in plaintext).
+- `role`: Enum `['user', 'admin']` (defaults to `'user'`).
+
+### 2. Password Security (`bcryptjs`)
+- Pre-save Mongoose hook hashes passwords with salt factor 10 before saving to database.
+- `user.matchPassword(enteredPassword)` compares plaintext login passwords against stored hash safely.
+
+### 3. JWT Token Architecture
+- Token payload contains `{ id: user._id, role: user.role }`.
+- Signed using `JWT_SECRET` configured in environment variables.
+- Required in client HTTP headers for protected endpoints:
+  ```http
+  Authorization: Bearer <JWT_TOKEN>
+  ```
+
+### 4. Middleware Security Guards (`middleware/auth.js`)
+- **`protect`**: Verifies token presence and validity in HTTP Authorization header; populates `req.user`. Returns `401 Unauthorized` if invalid/missing.
+- **`adminOnly`**: Ensures `req.user.role === 'admin'`. Returns `403 Forbidden` if non-admin user attempts access.
 
 ---
 
-## Notes
-- Refer to [[Backend/Middleware]] for configured middleware stack.
+## API Endpoints
+
+| Method | Endpoint | Access | Purpose |
+|---|---|---|---|
+| `POST` | `/api/auth/signup` | Public | Register new account & return JWT token |
+| `POST` | `/api/auth/login` | Public | Authenticate credentials & return JWT token |

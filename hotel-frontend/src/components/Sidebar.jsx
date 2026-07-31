@@ -1,16 +1,29 @@
 import React, { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('search');
+  const { user, isLoggedIn, isAdmin, logout } = useAuth();
+  const navigate = useNavigate();
 
   const toggleSidebar = () => {
     setIsOpen((prev) => !prev);
   };
 
+  const closeSidebar = () => {
+    setIsOpen(false);
+  };
+
+  const handleLogoutClick = () => {
+    logout();
+    closeSidebar();
+    navigate('/');
+  };
+
   return (
     <>
-      {/* Mobile Hamburger Header / Button */}
+      {/* Mobile Header / Hamburger */}
       <div className="mobile-header">
         <button
           className="hamburger-btn"
@@ -25,7 +38,7 @@ const Sidebar = () => {
       </div>
 
       {/* Overlay for mobile drawer */}
-      {isOpen && <div className="sidebar-overlay" onClick={toggleSidebar}></div>}
+      {isOpen && <div className="sidebar-overlay" onClick={closeSidebar}></div>}
 
       {/* Navigation Sidebar */}
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
@@ -34,30 +47,69 @@ const Sidebar = () => {
           <h2>BookInn</h2>
         </div>
 
+        {isLoggedIn && user && (
+          <div className="user-profile-summary">
+            <span className="user-avatar">👤</span>
+            <div className="user-info">
+              <p className="user-name">{user.name}</p>
+              <p className="user-role-badge">{user.role}</p>
+            </div>
+          </div>
+        )}
+
         <nav className="sidebar-nav">
-          <a
-            href="#search"
-            className={`nav-link ${activeTab === 'search' ? 'active' : ''}`}
-            onClick={(e) => {
-              e.preventDefault();
-              setActiveTab('search');
-              setIsOpen(false);
-            }}
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            onClick={closeSidebar}
           >
             <span className="nav-icon">🔍</span> Search Rooms
-          </a>
+          </NavLink>
 
-          <a
-            href="#bookings"
-            className={`nav-link ${activeTab === 'bookings' ? 'active' : ''}`}
-            onClick={(e) => {
-              e.preventDefault();
-              setActiveTab('bookings');
-              setIsOpen(false);
-            }}
-          >
-            <span className="nav-icon">📋</span> My Bookings
-          </a>
+          {isLoggedIn ? (
+            <>
+              <NavLink
+                to="/bookings"
+                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                onClick={closeSidebar}
+              >
+                <span className="nav-icon">📋</span> My Bookings
+              </NavLink>
+
+              {isAdmin && (
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                  onClick={closeSidebar}
+                >
+                  <span className="nav-icon">👑</span> All Bookings (Admin)
+                </NavLink>
+              )}
+
+              <button type="button" className="nav-link btn-logout" onClick={handleLogoutClick}>
+                <span className="nav-icon">🚪</span> Log Out
+              </button>
+            </>
+          ) : (
+            <>
+              <NavLink
+                to="/login"
+                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                onClick={closeSidebar}
+              >
+                <span className="nav-icon">🔑</span> Log In
+              </NavLink>
+
+              <NavLink
+                to="/signup"
+                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                onClick={closeSidebar}
+              >
+                <span className="nav-icon">✨</span> Sign Up
+              </NavLink>
+            </>
+          )}
         </nav>
       </aside>
     </>

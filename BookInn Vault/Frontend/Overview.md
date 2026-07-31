@@ -1,25 +1,20 @@
 # Frontend Overview
 
 ## Purpose
-This document provides the status of the client-side user interface layer for the **BookInn** system.
+This document provides the status and architecture of the client-side user interface layer for the **BookInn** system.
 
 ---
 
-## What is Currently Implemented
+## Status: Implemented
 
-> [!IMPORTANT]
-> **Status: Not Implemented**
-> 
-> There is currently **no frontend client application** in the repository. The project currently consists exclusively of the Node.js/Express backend REST API.
+The frontend is a single-page React application built with Vite and React Router 6, styled using Vanilla CSS with CSS variables (`:root`) for a warm, professional hospitality theme.
 
 ---
 
-## Current Architecture State
-- No React, Vue, HTML/CSS static UI, or mobile application code exists in the workspace.
-- API endpoints are tested directly via HTTP clients (such as Postman, cURL, or custom Node scripts).
-- Cross-Origin Resource Sharing (`cors`) middleware is enabled in [[Backend/Server|server.js]] to support future frontend client connections.
+## Architecture State
 
----
-
-## Dependencies
-- None (Frontend layer not present).
+- **Framework**: Vite + React 18 (JavaScript / JSX).
+- **Styling**: Responsive Vanilla CSS (`index.css`) featuring a warm hospitality color palette (Navy `#1a2b3c`, Gold `#c9a35d`, Cream `#faf8f5`).
+- **Routing**: React Router 6 handling client-side SPA transitions between `/` (Search Rooms) and `/bookings` (My Bookings).
+- **API Communication**: Axios modules (`api/rooms.js`, `api/bookings.js`) targeting backend REST endpoints via Vite proxy (`/api`).
+- **Currency**: `Intl.NumberFormat('en-IN')` formatting all price displays in Indian Rupees (`₹`).

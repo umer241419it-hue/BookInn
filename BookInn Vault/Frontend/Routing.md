@@ -1,18 +1,26 @@
 # Frontend — Routing
 
 ## Purpose
-This document records client-side routing definitions.
+This document details the client-side routing setup configured in **hotel-frontend**.
 
 ---
 
-## What is Currently Implemented
+## Router Configuration
 
-> [!IMPORTANT]
-> **Status: Not Implemented**
-> 
-> No client-side routing engine (such as React Router) is implemented.
+Client-side routing is powered by `react-router-dom` 6 in [App.jsx](file:///c:/Users/kadiw/OneDrive/Desktop/BookInn/hotel-frontend/src/App.jsx):
 
----
+```jsx
+<Router>
+  <div className="app-layout">
+    <Sidebar />
+    <div className="main-content-wrapper">
+      <Routes>
+        <Route path="/" element={<SearchPage />} />
+        <Route path="/bookings" element={<BookingsPage />} />
+      </Routes>
+    </div>
+  </div>
+</Router>
+```
 
-## Notes
-- All routing in the application is currently server-side REST API routing defined in [[Backend/API Routes]].
+- Navigation links inside [Sidebar.jsx](file:///c:/Users/kadiw/OneDrive/Desktop/BookInn/hotel-frontend/src/components/Sidebar.jsx) use `<NavLink>` to prevent full browser reloads and provide active tab highlighting.

@@ -1,81 +1,33 @@
-# Backend — API Routes
+# API Routes
 
 ## Purpose
-This document details the route mapping layer in the **BookInn** application.
+This document maps HTTP request paths to their corresponding router files in `hotel-backend/routes/`.
 
 ---
 
-## What is Currently Implemented
+## Router Mapping
 
-Routes strictly map HTTP verbs and endpoint paths to controller functions. There is no business logic inside route handlers.
-
-### Implemented Routers:
-1. `routes/roomRoutes.js` mounted at `/api/rooms`
-2. `routes/bookingRoutes.js` mounted at `/api/bookings`
-
----
-
-## 1. Room Routes (`routes/roomRoutes.js`)
-
-```javascript
-const express = require("express");
-const router = express.Router();
-const { getAllRooms, getAvailableRooms } = require("../controllers/roomController");
-
-router.get("/", getAllRooms);
-router.get("/available", getAvailableRooms);
-
-module.exports = router;
+```
+server.js
+  ├── app.use("/api/auth", authRoutes)
+  ├── app.use("/api/rooms", roomRoutes)
+  └── app.use("/api/bookings", bookingRoutes)
 ```
 
-### Route Table:
-
-| HTTP Verb | Full Path | Route Handler | Description |
-|---|---|---|---|
-| `GET` | `/api/rooms` | `getAllRooms` | Retrieves all room documents |
-| `GET` | `/api/rooms/available` | `getAvailableRooms` | Retrieves rooms available for a specified `checkIn` and `checkOut` range |
-
 ---
 
-## 2. Booking Routes (`routes/bookingRoutes.js`)
+## Endpoint Details
 
-```javascript
-const express = require("express");
-const router = express.Router();
-const { getAllBookings, createBooking, cancelBooking } = require("../controllers/bookingController");
+### 1. Auth Router (`authRoutes.js`)
+- `POST /api/auth/signup` -> `signup` (Public)
+- `POST /api/auth/login` -> `login` (Public)
 
-router.get("/", getAllBookings);
-router.post("/", createBooking);
-router.delete("/:id", cancelBooking);
+### 2. Room Router (`roomRoutes.js`)
+- `GET /api/rooms` -> `getAllRooms` (Public)
+- `GET /api/rooms/available` -> `getAvailableRooms` (Public)
 
-module.exports = router;
-```
-
-### Route Table:
-
-| HTTP Verb | Full Path | Route Handler | Description |
-|---|---|---|---|
-| `GET` | `/api/bookings` | `getAllBookings` | Retrieves all bookings populated with room data |
-| `POST` | `/api/bookings` | `createBooking` | Validates dates & availability, creates a booking |
-| `DELETE` | `/api/bookings/:id` | `cancelBooking` | Deletes a booking document by ID |
-
----
-
-## How It Works
-1. Express receives an incoming HTTP request at a specific URL path.
-2. `server.js` evaluates path prefixes (`/api/rooms` or `/api/bookings`) and delegates to the appropriate router module.
-3. The router matches the path (`/`, `/available`, `/:id`) and HTTP method (`GET`, `POST`, `DELETE`).
-4. The router forwards execution directly to the bound controller method in [[Backend/Controllers|roomController.js]] or [[Backend/Controllers|bookingController.js]].
-
----
-
-## Important Files Involved
-- [routes/roomRoutes.js](file:///c:/Users/kadiw/OneDrive/Desktop/BookInn/routes/roomRoutes.js)
-- [routes/bookingRoutes.js](file:///c:/Users/kadiw/OneDrive/Desktop/BookInn/routes/bookingRoutes.js)
-- [controllers/roomController.js](file:///c:/Users/kadiw/OneDrive/Desktop/BookInn/controllers/roomController.js)
-- [controllers/bookingController.js](file:///c:/Users/kadiw/OneDrive/Desktop/BookInn/controllers/bookingController.js)
-
----
-
-## Dependencies
-- `express.Router()`
+### 3. Booking Router (`bookingRoutes.js`)
+- `GET /api/bookings/my-bookings` -> `protect`, `getMyBookings` (User/Protected)
+- `GET /api/bookings` -> `protect`, `adminOnly`, `getAllBookings` (Admin Only)
+- `POST /api/bookings` -> `protect`, `createBooking` (User/Protected)
+- `DELETE /api/bookings/:id` -> `protect`, `cancelBooking` (Owner or Admin)
