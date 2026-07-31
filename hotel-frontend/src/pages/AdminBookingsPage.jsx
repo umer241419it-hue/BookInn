@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAllBookings, cancelBooking } from '../api/bookings';
+import Logo from '../components/Logo';
 
 const AdminBookingsPage = () => {
   const [bookings, setBookings] = useState([]);
@@ -52,8 +53,12 @@ const AdminBookingsPage = () => {
   return (
     <div className="bookings-page">
       <div className="bookings-page-header">
-        <h2>All Hotel Reservations (Admin View)</h2>
-        <p>Manage reservations across all registered users</p>
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Logo size="small" iconOnly /> All Hotel Reservations (Admin View)
+        </h2>
+        <p style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.25rem' }}>
+          Manage reservations across all registered users on <Logo size="xs" inline />
+        </p>
       </div>
 
       {error && <div className="error-banner">{error}</div>}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createBooking } from '../api/bookings';
 import { formatPriceINR } from '../utils/formatCurrency';
+import Logo from './Logo';
 
 const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose, onBookingSuccess }) => {
   const [guestName, setGuestName] = useState('');
@@ -31,7 +32,7 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
 
     try {
       await createBooking({
-        roomId: room._id,
+        roomType: room.type,
         guestName: guestName.trim(),
         guestPhone: guestPhone.trim(),
         checkIn,
@@ -48,14 +49,13 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
       if (err.response) {
         const status = err.response.status;
         if (status === 409) {
-          setError('This room was just booked by someone else — please choose another');
+          setError('Rooms in this category were just booked for these dates — please select another');
         } else if (status === 400) {
           setError(err.response.data?.error || 'Invalid booking details provided.');
         } else {
           setError('Something went wrong, please try again');
         }
       } else {
-        // Network or server unreachable
         setError('Something went wrong, please try again');
       }
     } finally {
@@ -67,7 +67,9 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Book Room {room.number} ({room.type})</h3>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Logo size="small" iconOnly /> Book {room.type} Room
+          </h3>
           <button type="button" className="modal-close-btn" onClick={onClose}>
             &times;
           </button>
@@ -81,7 +83,7 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
         {error && <div className="error-banner">{error}</div>}
         {success && (
           <div className="success-banner">
-            🎉 Booking confirmed successfully! Refreshing rooms...
+            🎉 Booking confirmed successfully! Refreshing available rooms...
           </div>
         )}
 

@@ -4,15 +4,20 @@ import { formatPriceINR } from '../utils/formatCurrency';
 const RoomCard = ({ room, onBookRoom }) => {
   if (!room) return null;
 
+  // room prop holds category summary object: { type, price, capacity, count, roomIds }
   return (
     <div className="room-card">
       <div>
         <div className="room-card-header">
-          <span className="room-number">Room {room.number}</span>
-          <span className="room-type-badge">{room.type}</span>
+          <span className="room-title">{room.type} Room</span>
+          <span className="room-count-badge">
+            {room.count} {room.count === 1 ? 'room available' : 'rooms available'}
+          </span>
         </div>
         <div className="room-details">
-          <p><strong>Capacity:</strong> {room.capacity} {room.capacity === 1 ? 'Guest' : 'Guests'}</p>
+          <p>
+            <strong>Capacity:</strong> {room.capacity} {room.capacity === 1 ? 'Guest' : 'Guests'}
+          </p>
         </div>
       </div>
       <div>
@@ -24,7 +29,7 @@ const RoomCard = ({ room, onBookRoom }) => {
           className="btn-book-room"
           onClick={() => onBookRoom && onBookRoom(room)}
         >
-          Book Room
+          Book {room.type}
         </button>
       </div>
     </div>

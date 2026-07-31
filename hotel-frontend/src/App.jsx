@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
+import Logo from './components/Logo';
 import SearchPage from './pages/SearchPage';
 import BookingsPage from './pages/BookingsPage';
 import AdminBookingsPage from './pages/AdminBookingsPage';
@@ -17,18 +18,28 @@ function App() {
           <Sidebar />
           <div className="main-content-wrapper">
             <header className="app-header">
-              <h1>BookInn Hotel</h1>
+              <div className="app-header-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                <Logo size="large" variant="default" />
+                <span style={{ fontSize: '1.85rem', fontWeight: 700, color: 'var(--primary-color)' }}>Hotel</span>
+              </div>
               <p>Find & Check Available Rooms</p>
             </header>
             <main>
               <Routes>
-                <Route path="/" element={<SearchPage />} />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute requireAuth={false} disallowAdmin={true}>
+                      <SearchPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignupPage />} />
                 <Route
                   path="/bookings"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute disallowAdmin={true}>
                       <BookingsPage />
                     </ProtectedRoute>
                   }

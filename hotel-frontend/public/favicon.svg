@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40" fill="none">
+  <!-- Rounded Navy Background -->
+  <rect width="40" height="40" rx="9" fill="#1A2B3C" />
+  <!-- Warm Gold Hotel Roof Peak -->
+  <path d="M20 7L31 16H27V31H13V16H9L20 7Z" fill="url(#faviconGold)" />
+  <!-- Navy Keyhole cutout -->
+  <path d="M20 19A2.5 2.5 0 0 0 17.5 21.5C17.5 22.4 18 23.1 18.7 23.5L18.5 27.5H21.5L21.3 23.5C22 23.1 22.5 22.4 22.5 21.5A2.5 2.5 0 0 0 20 19Z" fill="#1A2B3C" />
+  <defs>
+    <linearGradient id="faviconGold" x1="9" y1="7" x2="31" y2="31" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E5C158" />
+      <stop offset="1" stop-color="#C9A35D" />
+    </linearGradient>
+  </defs>
+</svg>

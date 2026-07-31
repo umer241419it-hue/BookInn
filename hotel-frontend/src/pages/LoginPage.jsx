@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Logo from '../components/Logo';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -38,8 +39,13 @@ const LoginPage = () => {
   return (
     <div className="auth-container">
       <div className="auth-card">
+        <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
+          <Logo size="large" />
+        </div>
         <h2>Welcome Back</h2>
-        <p className="auth-subtitle">Log in to your BookInn account</p>
+        <p className="auth-subtitle" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '0.35rem' }}>
+          Log in to your <Logo size="xs" inline /> account
+        </p>
 
         {error && <div className="error-banner">{error}</div>}
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getMyBookings, cancelBooking } from '../api/bookings';
+import Logo from '../components/Logo';
 
 const BookingsPage = () => {
   const [bookings, setBookings] = useState([]);
@@ -52,8 +53,12 @@ const BookingsPage = () => {
   return (
     <div className="bookings-page">
       <div className="bookings-page-header">
-        <h2>My Reservations</h2>
-        <p>View and manage your personal hotel room bookings</p>
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Logo size="small" iconOnly /> My Reservations
+        </h2>
+        <p style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.25rem' }}>
+          View and manage your personal hotel room bookings on <Logo size="xs" inline />
+        </p>
       </div>
 
       {error && <div className="error-banner">{error}</div>}

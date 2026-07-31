@@ -27,34 +27,62 @@ const getMyBookings = async (req, res) => {
 // POST /api/bookings (Protected)
 const createBooking = async (req, res) => {
   try {
-    const { roomId, guestName, guestPhone, checkIn, checkOut } = req.body;
+    const { roomId, roomType, guestName, guestPhone, checkIn, checkOut } = req.body;
     const userId = req.user.id; // Automatically pulled from protect middleware
 
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
 
     // Validate dates
+    if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
+      return res.status(400).json({ error: "Invalid checkIn or checkOut date format" });
+    }
+
     if (checkOutDate <= checkInDate) {
       return res.status(400).json({ error: "checkOut must be after checkIn" });
     }
 
-    // Verify the room exists
-    const room = await Room.findById(roomId);
-    if (!room) {
-      return res.status(404).json({ error: "Room not found" });
+    let targetRoomId = roomId;
+
+    if (!targetRoomId && roomType) {
+      // Find all rooms matching the requested category/type
+      const roomsOfType = await Room.find({ type: roomType });
+      if (roomsOfType.length === 0) {
+        return res.status(404).json({ error: `Room category '${roomType}' not found` });
+      }
+
+      // Re-check booked room IDs fresh at booking creation time
+      const bookedRoomIds = await getBookedRoomIds(checkInDate, checkOutDate);
+      const bookedSet = new Set(bookedRoomIds.map((id) => id.toString()));
+
+      // Automatically pick an available room of that category
+      const availableRoom = roomsOfType.find((r) => !bookedSet.has(r._id.toString()));
+
+      if (!availableRoom) {
+        return res.status(409).json({ error: `No '${roomType}' rooms are available for the selected dates` });
+      }
+
+      targetRoomId = availableRoom._id;
+    } else if (targetRoomId) {
+      // Verify specific room exists and is available (for backward compatibility if specific roomId passed)
+      const room = await Room.findById(targetRoomId);
+      if (!room) {
+        return res.status(404).json({ error: "Room not found" });
+      }
+
+      const bookedRoomIds = await getBookedRoomIds(checkInDate, checkOutDate);
+      const isBooked = bookedRoomIds.some((id) => id.toString() === targetRoomId.toString());
+
+      if (isBooked) {
+        return res.status(409).json({ error: "Room is not available for the selected dates" });
+      }
+    } else {
+      return res.status(400).json({ error: "Either roomType or roomId is required to place a booking" });
     }
 
-    // Re-check availability using shared overlap logic
-    const bookedRoomIds = await getBookedRoomIds(checkInDate, checkOutDate);
-    const isBooked = bookedRoomIds.some((id) => id.toString() === roomId.toString());
-
-    if (isBooked) {
-      return res.status(409).json({ error: "Room is not available for the selected dates" });
-    }
-
-    // Create the booking attached to the authenticated user
+    // Create the booking attached to the authenticated user and allocated room
     const booking = await Booking.create({
-      roomId,
+      roomId: targetRoomId,
       userId,
       guestName,
       guestPhone,
