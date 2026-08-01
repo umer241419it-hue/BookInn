@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createBooking } from '../api/bookings';
+import { createRazorpayOrder, verifyRazorpayPayment } from '../api/payments';
 import { formatPriceINR } from '../utils/formatCurrency';
 import Logo from './Logo';
 
@@ -9,14 +10,115 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
   const [checkIn, setCheckIn] = useState(initialCheckIn);
   const [checkOut, setCheckOut] = useState(initialCheckOut);
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [paymentFailed, setPaymentFailed] = useState(false);
+  const [pendingBooking, setPendingBooking] = useState(null);
 
   if (!room) return null;
+
+  // Launch Razorpay Checkout widget
+  const triggerRazorpayCheckout = async (bookingObj) => {
+    setLoading(true);
+    setPaymentFailed(false);
+    setError('');
+
+    try {
+      // 1. Request Razorpay order from backend
+      const orderData = await createRazorpayOrder({ bookingId: bookingObj._id });
+
+      if (!orderData || !orderData.order) {
+        throw new Error('Could not generate Razorpay payment order.');
+      }
+
+      const { order, keyId } = orderData;
+
+      if (!window.Razorpay) {
+        setError('Razorpay SDK script is not loaded. Please refresh the page and try again.');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Configure Razorpay Widget Options
+      const options = {
+        key: keyId || import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency || 'INR',
+        name: 'BookInn Hotels',
+        description: `Payment for ${room.type} Room Stay (TEST MODE)`,
+        order_id: order.id,
+        prefill: {
+          name: guestName || bookingObj.guestName || '',
+          contact: guestPhone || bookingObj.guestPhone || '',
+        },
+        theme: {
+          color: '#6366f1',
+        },
+        handler: async function (response) {
+          setVerifying(true);
+          setLoading(false);
+          setError('');
+          try {
+            // 3. Verify signature server-side
+            const verifyRes = await verifyRazorpayPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              bookingId: bookingObj._id,
+            });
+
+            if (verifyRes.success) {
+              setSuccess(true);
+              setPaymentFailed(false);
+              setTimeout(() => {
+                onBookingSuccess();
+                onClose();
+              }, 2000);
+            } else {
+              setPaymentFailed(true);
+              setError('Payment verification failed on server. Signature mismatch.');
+            }
+          } catch (err) {
+            console.error('Payment verification error:', err);
+            setPaymentFailed(true);
+            setError(err.response?.data?.error || 'Server payment verification failed.');
+          } finally {
+            setVerifying(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setPaymentFailed(true);
+            setLoading(false);
+            setError('Payment process was dismissed before completion.');
+          },
+        },
+      };
+
+      const razorpayInstance = new window.Razorpay(options);
+
+      razorpayInstance.on('payment.failed', function (response) {
+        console.error('Razorpay Payment Failed:', response.error);
+        setPaymentFailed(true);
+        setLoading(false);
+        setError(`Payment failed: ${response.error.description || 'Transaction failed'}`);
+      });
+
+      razorpayInstance.open();
+    } catch (err) {
+      console.error('Razorpay checkout creation failed:', err);
+      setPaymentFailed(true);
+      setError(err.response?.data?.error || err.message || 'Failed to initialize payment gateway.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setPaymentFailed(false);
 
     if (!guestName.trim() || !guestPhone.trim() || !checkIn || !checkOut) {
       setError('Please fill in all required fields.');
@@ -31,7 +133,8 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
     setLoading(true);
 
     try {
-      await createBooking({
+      // Create initial pending booking
+      const newBooking = await createBooking({
         roomType: room.type,
         guestName: guestName.trim(),
         guestPhone: guestPhone.trim(),
@@ -39,13 +142,12 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
         checkOut,
       });
 
-      setSuccess(true);
-      setTimeout(() => {
-        onBookingSuccess();
-        onClose();
-      }, 1500);
+      setPendingBooking(newBooking);
+
+      // Immediately launch Razorpay modal
+      await triggerRazorpayCheckout(newBooking);
     } catch (err) {
-      console.error('Booking failed:', err);
+      console.error('Booking creation failed:', err);
       if (err.response) {
         const status = err.response.status;
         if (status === 409) {
@@ -53,13 +155,18 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
         } else if (status === 400) {
           setError(err.response.data?.error || 'Invalid booking details provided.');
         } else {
-          setError('Something went wrong, please try again');
+          setError('Something went wrong creating booking, please try again');
         }
       } else {
-        setError('Something went wrong, please try again');
+        setError('Something went wrong creating booking, please try again');
       }
-    } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRetryPayment = () => {
+    if (pendingBooking) {
+      triggerRazorpayCheckout(pendingBooking);
     }
   };
 
@@ -81,13 +188,44 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
         </div>
 
         {error && <div className="error-banner">{error}</div>}
-        {success && (
-          <div className="success-banner">
-            🎉 Booking confirmed successfully! Refreshing available rooms...
+
+        {verifying && (
+          <div className="loading-state" style={{ margin: '1rem 0' }}>
+            🔒 Cryptographically verifying signature with server... Please wait.
           </div>
         )}
 
-        {!success && (
+        {success && (
+          <div className="success-banner">
+            🎉 Payment verified & reservation confirmed! Refreshing bookings...
+          </div>
+        )}
+
+        {paymentFailed && !verifying && !success && (
+          <div className="payment-failed-container" style={{ margin: '1rem 0', textAlign: 'center' }}>
+            <p style={{ color: '#ef4444', fontWeight: 600, marginBottom: '0.75rem' }}>
+              ⚠️ Payment Pending / Verification Failed
+            </p>
+            <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '1rem' }}>
+              Your reservation has been saved with <strong>pending</strong> payment status. You can retry paying now with Razorpay TEST mode.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button
+                type="button"
+                className="btn-submit"
+                onClick={handleRetryPayment}
+                disabled={loading}
+              >
+                {loading ? 'Opening Razorpay...' : '💳 Retry Payment (Razorpay Test)'}
+              </button>
+              <button type="button" className="btn-cancel" onClick={onClose}>
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!success && !paymentFailed && !verifying && (
           <form onSubmit={handleSubmit} className="booking-form">
             <div className="form-group">
               <label htmlFor="guestName">Guest Full Name *</label>
@@ -140,7 +278,7 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
                 Cancel
               </button>
               <button type="submit" className="btn-submit" disabled={loading}>
-                {loading ? 'Confirming...' : 'Confirm Booking'}
+                {loading ? 'Initializing Razorpay...' : 'Proceed to Pay with Razorpay'}
               </button>
             </div>
           </form>
