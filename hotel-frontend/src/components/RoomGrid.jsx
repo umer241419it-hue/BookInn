@@ -1,7 +1,7 @@
 import React from 'react';
 import RoomCard from './RoomCard';
 
-const RoomGrid = ({ rooms, onBookRoom }) => {
+const RoomGrid = ({ rooms, onBookRoom, onEditRoom, onDeleteRoom }) => {
   if (!rooms || rooms.length === 0) {
     return <div className="empty-state">No rooms available</div>;
   }
@@ -9,7 +9,13 @@ const RoomGrid = ({ rooms, onBookRoom }) => {
   return (
     <div className="room-grid">
       {rooms.map((room) => (
-        <RoomCard key={room._id || room.number} room={room} onBookRoom={onBookRoom} />
+        <RoomCard
+          key={room.type}
+          room={room}
+          onBookRoom={onBookRoom}
+          onEditRoom={onEditRoom}
+          onDeleteRoom={onDeleteRoom}
+        />
       ))}
     </div>
   );

@@ -2,9 +2,10 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
-import Sidebar from './components/Sidebar';
-import Logo from './components/Logo';
+import Navbar from './components/Navbar';
 import SearchPage from './pages/SearchPage';
+import AboutPage from './pages/AboutPage';
+import ProfilePage from './pages/ProfilePage';
 import BookingsPage from './pages/BookingsPage';
 import AdminBookingsPage from './pages/AdminBookingsPage';
 import LoginPage from './pages/LoginPage';
@@ -14,47 +15,47 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="app-layout">
-          <Sidebar />
-          <div className="main-content-wrapper">
-            <header className="app-header">
-              <div className="app-header-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                <Logo size="large" variant="default" />
-                <span style={{ fontSize: '1.85rem', fontWeight: 700, color: 'var(--primary-color)' }}>Hotel</span>
-              </div>
-              <p>Find & Check Available Rooms</p>
-            </header>
-            <main>
-              <Routes>
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute requireAuth={false} disallowAdmin={true}>
-                      <SearchPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/signup" element={<SignupPage />} />
-                <Route
-                  path="/bookings"
-                  element={
-                    <ProtectedRoute disallowAdmin={true}>
-                      <BookingsPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin"
-                  element={
-                    <ProtectedRoute requireAdmin={true}>
-                      <AdminBookingsPage />
-                    </ProtectedRoute>
-                  }
-                />
-              </Routes>
-            </main>
-          </div>
+        <div className="app-container">
+          <Navbar />
+          <main className="main-content">
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute requireAuth={false}>
+                    <SearchPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/about" element={<AboutPage />} />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignupPage />} />
+              <Route
+                path="/bookings"
+                element={
+                  <ProtectedRoute disallowAdmin={true}>
+                    <BookingsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminBookingsPage />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </main>
         </div>
       </Router>
     </AuthProvider>

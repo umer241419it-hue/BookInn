@@ -19,6 +19,20 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    phoneNumber: {
+      type: String,
+      required: true,
+      trim: true,
+      default: "+91 9876543210",
+    },
+    phoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
     role: {
       type: String,
       enum: ["user", "admin"],

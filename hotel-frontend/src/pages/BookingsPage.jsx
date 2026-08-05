@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Copy, Check, RotateCcw, CreditCard, CheckCircle2 } from 'lucide-react';
 import { getMyBookings, cancelBooking } from '../api/bookings';
 import { createRazorpayOrder, verifyRazorpayPayment } from '../api/payments';
 import { formatPriceINR } from '../utils/formatCurrency';
@@ -115,7 +116,7 @@ const BookingsPage = () => {
             });
 
             if (verifyRes.success) {
-              setSuccessMsg('🎉 Payment successfully verified! Booking confirmed.');
+              setSuccessMsg('Payment successfully verified! Booking confirmed.');
               fetchUserBookings();
             } else {
               setError('Payment verification failed on server.');
@@ -273,9 +274,9 @@ const BookingsPage = () => {
                         type="button"
                         onClick={() => handleCopy(booking.razorpayOrderId)}
                         title="Copy Order ID"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '0.75rem', color: copiedId === booking.razorpayOrderId ? '#16a34a' : '#6366f1' }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '0.75rem', color: copiedId === booking.razorpayOrderId ? '#16a34a' : '#6366f1', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
                       >
-                        {copiedId === booking.razorpayOrderId ? '✓ Copied' : '📋'}
+                        {copiedId === booking.razorpayOrderId ? <><Check size={12} aria-hidden="true" /> Copied</> : <Copy size={12} aria-hidden="true" />}
                       </button>
                     </span>
                   )}
@@ -287,9 +288,9 @@ const BookingsPage = () => {
                         type="button"
                         onClick={() => handleCopy(booking.razorpayPaymentId)}
                         title="Copy Payment ID"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '0.75rem', color: copiedId === booking.razorpayPaymentId ? '#16a34a' : '#6366f1' }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '0.75rem', color: copiedId === booking.razorpayPaymentId ? '#16a34a' : '#6366f1', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
                       >
-                        {copiedId === booking.razorpayPaymentId ? '✓ Copied' : '📋'}
+                        {copiedId === booking.razorpayPaymentId ? <><Check size={12} aria-hidden="true" /> Copied</> : <Copy size={12} aria-hidden="true" />}
                       </button>
                     </span>
                   )}
@@ -298,8 +299,8 @@ const BookingsPage = () => {
                 {/* Refund Information if active */}
                 {booking.refundStatus && booking.refundStatus !== 'none' && (
                   <div style={{ marginTop: '0.5rem', background: '#f0fdf4', padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid #bbf7d0', fontSize: '0.85rem' }}>
-                    <p style={{ margin: 0, fontWeight: 600, color: '#166534' }}>
-                      💸 Refund Details ({formatPriceINR(booking.refundAmount || booking.amountPaid || 0)})
+                    <p style={{ margin: 0, fontWeight: 600, color: '#166534', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <RotateCcw size={14} aria-hidden="true" /> Refund Details ({formatPriceINR(booking.refundAmount || booking.amountPaid || 0)})
                     </p>
                     {booking.razorpayRefundId && (
                       <p style={{ margin: '0.2rem 0 0 0', color: '#334155' }}>
@@ -308,9 +309,9 @@ const BookingsPage = () => {
                           type="button"
                           onClick={() => handleCopy(booking.razorpayRefundId)}
                           title="Copy Refund ID"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '0.75rem', color: copiedId === booking.razorpayRefundId ? '#16a34a' : '#6366f1' }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '0.75rem', color: copiedId === booking.razorpayRefundId ? '#16a34a' : '#6366f1', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
                         >
-                          {copiedId === booking.razorpayRefundId ? '✓ Copied' : '📋'}
+                          {copiedId === booking.razorpayRefundId ? <><Check size={12} aria-hidden="true" /> Copied</> : <Copy size={12} aria-hidden="true" />}
                         </button>
                       </p>
                     )}
@@ -328,11 +329,12 @@ const BookingsPage = () => {
                   <button
                     type="button"
                     className="btn-submit"
-                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
                     onClick={() => handlePayNow(booking)}
                     disabled={payingBookingId === booking._id}
                   >
-                    {payingBookingId === booking._id ? 'Opening Razorpay...' : '💳 Pay Now'}
+                    <CreditCard size={14} aria-hidden="true" />
+                    {payingBookingId === booking._id ? 'Opening Razorpay...' : 'Pay Now'}
                   </button>
                 )}
                 {booking.status !== 'cancelled' && (

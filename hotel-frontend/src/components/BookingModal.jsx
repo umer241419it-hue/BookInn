@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { X, ShieldCheck, CheckCircle2, AlertTriangle, CreditCard } from 'lucide-react';
 import { createBooking } from '../api/bookings';
 import { createRazorpayOrder, verifyRazorpayPayment } from '../api/payments';
 import { formatPriceINR } from '../utils/formatCurrency';
@@ -177,8 +178,8 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
           <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Logo size="small" iconOnly /> Book {room.type} Room
           </h3>
-          <button type="button" className="modal-close-btn" onClick={onClose}>
-            &times;
+          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close modal">
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 
@@ -190,21 +191,21 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
         {error && <div className="error-banner">{error}</div>}
 
         {verifying && (
-          <div className="loading-state" style={{ margin: '1rem 0' }}>
-            🔒 Cryptographically verifying signature with server... Please wait.
+          <div className="loading-state" style={{ margin: '1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <ShieldCheck size={18} aria-hidden="true" /> Cryptographically verifying signature with server... Please wait.
           </div>
         )}
 
         {success && (
-          <div className="success-banner">
-            🎉 Payment verified & reservation confirmed! Refreshing bookings...
+          <div className="success-banner" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <CheckCircle2 size={18} aria-hidden="true" /> Payment verified & reservation confirmed! Refreshing bookings...
           </div>
         )}
 
         {paymentFailed && !verifying && !success && (
           <div className="payment-failed-container" style={{ margin: '1rem 0', textAlign: 'center' }}>
-            <p style={{ color: '#ef4444', fontWeight: 600, marginBottom: '0.75rem' }}>
-              ⚠️ Payment Pending / Verification Failed
+            <p style={{ color: '#ef4444', fontWeight: 600, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+              <AlertTriangle size={18} aria-hidden="true" /> Payment Pending / Verification Failed
             </p>
             <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '1rem' }}>
               Your reservation has been saved with <strong>pending</strong> payment status. You can retry paying now with Razorpay TEST mode.
@@ -215,8 +216,10 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
                 className="btn-submit"
                 onClick={handleRetryPayment}
                 disabled={loading}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
               >
-                {loading ? 'Opening Razorpay...' : '💳 Retry Payment (Razorpay Test)'}
+                <CreditCard size={18} aria-hidden="true" />
+                {loading ? 'Opening Razorpay...' : 'Retry Payment (Razorpay Test)'}
               </button>
               <button type="button" className="btn-cancel" onClick={onClose}>
                 Close

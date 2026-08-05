@@ -19,13 +19,21 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  const handleSignup = async (name, email, password) => {
-    const data = await signupApi(name, email, password);
+  const handleSignup = async (name, email, password, phoneNumber) => {
+    const data = await signupApi(name, email, password, phoneNumber);
     setToken(data.token);
     setUser(data.user);
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
     return data;
+  };
+
+  const updateUser = (updatedUserData) => {
+    setUser((prev) => {
+      const newUser = { ...prev, ...updatedUserData };
+      localStorage.setItem('user', JSON.stringify(newUser));
+      return newUser;
+    });
   };
 
   const handleLogout = () => {
@@ -42,6 +50,7 @@ export const AuthProvider = ({ children }) => {
     isAdmin: user?.role === 'admin',
     login: handleLogin,
     signup: handleSignup,
+    updateUser,
     logout: handleLogout,
   };
 

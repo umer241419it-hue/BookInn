@@ -11,10 +11,10 @@ const generateToken = (id, role) => {
 // POST /api/auth/signup
 const signup = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, phoneNumber, role } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: "Please provide name, email, and password" });
+    if (!name || !email || !password || !phoneNumber) {
+      return res.status(400).json({ error: "Please provide name, email, password, and mobile number" });
     }
 
     const userExists = await User.findOne({ email });
@@ -26,6 +26,7 @@ const signup = async (req, res) => {
       name,
       email,
       password,
+      phoneNumber: phoneNumber.trim(),
       role: role === "admin" ? "admin" : "user",
     });
 
@@ -37,6 +38,9 @@ const signup = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phoneNumber: user.phoneNumber,
+        phoneVerified: user.phoneVerified,
+        emailVerified: user.emailVerified,
         role: user.role,
       },
     });
@@ -67,6 +71,9 @@ const login = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phoneNumber: user.phoneNumber || "+91 9876543210",
+        phoneVerified: user.phoneVerified || false,
+        emailVerified: user.emailVerified || false,
         role: user.role,
       },
     });
