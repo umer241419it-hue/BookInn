@@ -1,12 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Copy, Check, RotateCcw } from 'lucide-react';
 import { getAllBookings, cancelBooking } from '../api/bookings';
 import { formatPriceINR } from '../utils/formatCurrency';
+import { formatDateTime } from '../utils/formatDate';
+import BookingStatusGroup from '../components/BookingStatusBadge';
 import Logo from '../components/Logo';
 
 const AdminBookingsPage = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const tabParam = searchParams.get('tab');
+  const activeTab = tabParam === 'cancelled' || tabParam === 'refunds' ? 'refunds' : 'bookings';
+
+  const handleTabChange = (tabKey) => {
+    const paramValue = tabKey === 'refunds' ? 'cancelled' : 'booked';
+    setSearchParams({ tab: paramValue }, { replace: true });
+  };
+
   const [copiedId, setCopiedId] = useState('');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -81,7 +94,11 @@ const AdminBookingsPage = () => {
     });
   };
 
-  const filteredBookings = bookings.filter((b) => {
+  const bookedBookings = bookings.filter((b) => b.status !== 'cancelled');
+  const cancelledBookings = bookings.filter((b) => b.status === 'cancelled');
+  const tabBookings = activeTab === 'refunds' ? cancelledBookings : bookedBookings;
+
+  const filteredBookings = tabBookings.filter((b) => {
     if (filterStatus !== 'all' && b.status !== filterStatus) return false;
     if (filterPayment !== 'all' && b.paymentStatus !== filterPayment) return false;
     return true;
@@ -98,6 +115,42 @@ const AdminBookingsPage = () => {
 
       {error && <div className="error-banner">{error}</div>}
       {successMsg && <div className="success-banner">{successMsg}</div>}
+
+      {/* Tab Navigation */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0' }}>
+        <button
+          type="button"
+          onClick={() => handleTabChange('bookings')}
+          style={{
+            padding: '0.6rem 1.2rem',
+            background: 'none',
+            border: 'none',
+            borderBottom: activeTab === 'bookings' ? '3px solid #6366f1' : '3px solid transparent',
+            color: activeTab === 'bookings' ? '#6366f1' : '#64748b',
+            fontWeight: activeTab === 'bookings' ? '600' : '500',
+            fontSize: '0.95rem',
+            cursor: 'pointer',
+          }}
+        >
+          Booked ({bookedBookings.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => handleTabChange('refunds')}
+          style={{
+            padding: '0.6rem 1.2rem',
+            background: 'none',
+            border: 'none',
+            borderBottom: activeTab === 'refunds' ? '3px solid #6366f1' : '3px solid transparent',
+            color: activeTab === 'refunds' ? '#6366f1' : '#64748b',
+            fontWeight: activeTab === 'refunds' ? '600' : '500',
+            fontSize: '0.95rem',
+            cursor: 'pointer',
+          }}
+        >
+          Cancelled ({cancelledBookings.length})
+        </button>
+      </div>
 
       <div className="admin-filter-bar" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem', background: '#fff', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -134,28 +187,34 @@ const AdminBookingsPage = () => {
       {loading ? (
         <div className="loading-state">Loading all system bookings...</div>
       ) : filteredBookings.length === 0 ? (
-        <div className="empty-state">No bookings match the selected filters.</div>
+        <div className="empty-state">
+          {activeTab === 'refunds' ? 'No cancelled bookings match the selected filters.' : 'No active bookings match the selected filters.'}
+        </div>
       ) : (
         <div className="bookings-list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {filteredBookings.map((booking) => (
             <div key={booking._id} className="booking-card" style={{ background: '#fff', padding: '1.25rem', borderRadius: '10px', border: '1px solid var(--border-color)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
               <div className="booking-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem' }}>
-                    Room {booking.roomId?.number || 'N/A'} ({booking.roomId?.type || 'Standard'})
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: 600 }}>
+                    {booking.guestName}
+                    <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 400, marginLeft: '0.5rem' }}>
+                      ({booking.guestPhone})
+                    </span>
                   </h3>
-                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    Guest: <strong>{booking.guestName}</strong> ({booking.guestPhone})
+                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.875rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <span style={{ background: '#f1f5f9', color: '#334155', padding: '0.15rem 0.5rem', borderRadius: '4px', fontWeight: 600, fontSize: '0.8rem' }}>
+                      Room {booking.roomId?.number || 'N/A'}
+                    </span>
+                    <span>•</span>
+                    <span>{booking.roomId?.type || 'Standard'}</span>
                   </p>
                 </div>
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  <span className={`status-badge status-${booking.status}`}>
-                    Status: {booking.status}
-                  </span>
-                  <span className={`status-badge payment-${booking.paymentStatus}`}>
-                    Payment: {booking.paymentStatus}
-                  </span>
-                </div>
+                <BookingStatusGroup
+                  paymentStatus={booking.paymentStatus}
+                  refundStatus={booking.refundStatus}
+                  bookingStatus={booking.status}
+                />
               </div>
 
               <div className="booking-card-body" style={{ fontSize: '0.9rem', color: '#334155' }}>
@@ -164,6 +223,9 @@ const AdminBookingsPage = () => {
                 </p>
                 <p style={{ margin: '0.2rem 0' }}>
                   <strong>Check-In:</strong> {formatDate(booking.checkIn)} | <strong>Check-Out:</strong> {formatDate(booking.checkOut)}
+                </p>
+                <p style={{ margin: '0.2rem 0', color: '#64748b' }}>
+                  <strong>Booked On:</strong> {formatDateTime(booking.createdAt)}
                 </p>
 
                 <div style={{ margin: '0.5rem 0', display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.85rem', background: '#f8fafc', padding: '0.5rem 0.75rem', borderRadius: '6px' }}>
@@ -216,7 +278,7 @@ const AdminBookingsPage = () => {
                     )}
                     {booking.refundedAt && (
                       <p style={{ margin: '0.1rem 0 0 0', color: '#64748b' }}>
-                        <strong>Refunded On:</strong> {formatDate(booking.refundedAt)}
+                        <strong>Refunded On:</strong> {formatDateTime(booking.refundedAt)}
                       </p>
                     )}
                   </div>

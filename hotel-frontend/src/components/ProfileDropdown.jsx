@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { ChevronDown, User, Shield, CalendarDays, LogOut } from 'lucide-react';
+import { ChevronDown, User, Shield, LogOut } from 'lucide-react';
 import { useOutsideClick } from '../hooks/useOutsideClick';
 
 const ProfileDropdown = ({ user, isAdmin, logout }) => {
@@ -84,15 +84,6 @@ const ProfileDropdown = ({ user, isAdmin, logout }) => {
             </NavLink>
 
 
-
-            <NavLink
-              to="/bookings"
-              className={({ isActive }) => `dropdown-item ${isActive ? 'active' : ''}`}
-              onClick={handleItemClick}
-              role="menuitem"
-            >
-              <CalendarDays size={18} aria-hidden="true" /> My Bookings
-            </NavLink>
           </div>
 
           <div className="dropdown-divider" />

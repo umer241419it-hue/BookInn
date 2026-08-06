@@ -53,9 +53,10 @@ const bookingSchema = new mongoose.Schema(
     razorpayRefundId: {
       type: String,
     },
+    // Enum constraint ensures data consistency and prevents invalid status strings in DB
     refundStatus: {
       type: String,
-      enum: ["none", "processing", "processed", "failed"],
+      enum: ["none", "pending", "processing", "processed", "failed"],
       default: "none",
     },
     refundAmount: {

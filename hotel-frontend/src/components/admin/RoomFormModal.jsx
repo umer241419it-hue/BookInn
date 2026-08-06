@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { X, Save, AlertCircle } from 'lucide-react';
 
 const RoomFormModal = ({ isOpen, onClose, onSubmit, initialData = null }) => {
@@ -25,6 +26,26 @@ const RoomFormModal = ({ isOpen, onClose, onSubmit, initialData = null }) => {
     }
     setError('');
   }, [initialData, isOpen]);
+
+  // Lock background scroll and handle Escape key while modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -73,11 +94,24 @@ const RoomFormModal = ({ isOpen, onClose, onSubmit, initialData = null }) => {
     }
   };
 
-  return (
-    <div className="modal-overlay" tabIndex={-1}>
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  const modalContent = (
+    <div
+      className="modal-overlay"
+      onClick={handleBackdropClick}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="room-form-modal-title"
+    >
       <div className="modal-card" style={{ maxWidth: '520px', padding: '1.75rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <h2 style={{ fontSize: '1.3rem', color: 'var(--primary-color)', margin: 0 }}>
+          <h2 id="room-form-modal-title" style={{ fontSize: '1.3rem', color: 'var(--primary-color)', margin: 0 }}>
             {isEditing ? `Edit ${initialData.type} Room` : 'Add New Room Type'}
           </h2>
           <button
@@ -85,6 +119,7 @@ const RoomFormModal = ({ isOpen, onClose, onSubmit, initialData = null }) => {
             className="btn-modal-close"
             onClick={onClose}
             aria-label="Close modal"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
           >
             <X size={20} />
           </button>
@@ -187,6 +222,8 @@ const RoomFormModal = ({ isOpen, onClose, onSubmit, initialData = null }) => {
       </div>
     </div>
   );
+
+  return ReactDOM.createPortal(modalContent, document.body);
 };
 
 export default RoomFormModal;

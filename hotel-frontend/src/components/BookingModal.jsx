@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { X, ShieldCheck, CheckCircle2, AlertTriangle, CreditCard } from 'lucide-react';
 import { createBooking } from '../api/bookings';
 import { createRazorpayOrder, verifyRazorpayPayment } from '../api/payments';
@@ -16,6 +17,26 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
   const [success, setSuccess] = useState(false);
   const [paymentFailed, setPaymentFailed] = useState(false);
   const [pendingBooking, setPendingBooking] = useState(null);
+
+  // Lock background scroll and handle Escape key while modal is active
+  useEffect(() => {
+    if (!room) return;
+
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [room, onClose]);
 
   if (!room) return null;
 
@@ -171,11 +192,24 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
     }
   };
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  const modalMarkup = (
+    <div
+      className="modal-overlay"
+      onClick={handleBackdropClick}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="booking-modal-title"
+    >
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <h3 id="booking-modal-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Logo size="small" iconOnly /> Book {room.type} Room
           </h3>
           <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close modal">
@@ -289,6 +323,8 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
       </div>
     </div>
   );
+
+  return ReactDOM.createPortal(modalMarkup, document.body);
 };
 
 export default BookingModal;

@@ -1,14 +1,26 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Copy, Check, RotateCcw, CreditCard, CheckCircle2 } from 'lucide-react';
 import { getMyBookings, cancelBooking } from '../api/bookings';
 import { createRazorpayOrder, verifyRazorpayPayment } from '../api/payments';
 import { formatPriceINR } from '../utils/formatCurrency';
+import { formatDateTime } from '../utils/formatDate';
+import BookingStatusGroup from '../components/BookingStatusBadge';
 import Logo from '../components/Logo';
 
 const BookingsPage = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('bookings');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const tabParam = searchParams.get('tab');
+  const activeTab = tabParam === 'cancelled' || tabParam === 'refunds' ? 'refunds' : 'bookings';
+
+  const handleTabChange = (tabKey) => {
+    const paramValue = tabKey === 'refunds' ? 'cancelled' : 'booked';
+    setSearchParams({ tab: paramValue }, { replace: true });
+  };
+
   const [payingBookingId, setPayingBookingId] = useState(null);
   const [copiedId, setCopiedId] = useState('');
   const [error, setError] = useState('');
@@ -153,32 +165,10 @@ const BookingsPage = () => {
     });
   };
 
-  const renderPaymentStatusBadge = (paymentStatus) => {
-    const status = paymentStatus || 'pending';
-    if (status === 'paid') {
-      return <span className="booking-status-badge confirmed" style={{ background: '#dcfce7', color: '#15803d' }}>Paid</span>;
-    }
-    if (status === 'failed') {
-      return <span className="booking-status-badge" style={{ background: '#fee2e2', color: '#b91c1c' }}>Payment Failed</span>;
-    }
-    return <span className="booking-status-badge" style={{ background: '#fef3c7', color: '#b45309' }}>Payment Pending</span>;
-  };
 
-  const renderRefundStatusBadge = (refundStatus) => {
-    if (refundStatus === 'processed') {
-      return <span className="booking-status-badge" style={{ background: '#dcfce7', color: '#15803d' }}>Refund Processed</span>;
-    }
-    if (refundStatus === 'processing') {
-      return <span className="booking-status-badge" style={{ background: '#fef3c7', color: '#b45309' }}>Refund Processing</span>;
-    }
-    if (refundStatus === 'failed') {
-      return <span className="booking-status-badge" style={{ background: '#fee2e2', color: '#b91c1c' }}>Refund Failed</span>;
-    }
-    return null;
-  };
-
-  const refundBookingsList = bookings.filter((b) => b.refundStatus && b.refundStatus !== 'none');
-  const activeBookingsList = activeTab === 'refunds' ? refundBookingsList : bookings;
+  const bookedBookings = bookings.filter((b) => b.status !== 'cancelled');
+  const cancelledBookings = bookings.filter((b) => b.status === 'cancelled');
+  const activeBookingsList = activeTab === 'refunds' ? cancelledBookings : bookedBookings;
 
   return (
     <div className="bookings-page">
@@ -198,7 +188,7 @@ const BookingsPage = () => {
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid #e2e8f0' }}>
         <button
           type="button"
-          onClick={() => setActiveTab('bookings')}
+          onClick={() => handleTabChange('bookings')}
           style={{
             padding: '0.6rem 1.2rem',
             background: 'none',
@@ -210,11 +200,11 @@ const BookingsPage = () => {
             cursor: 'pointer',
           }}
         >
-          My Bookings ({bookings.length})
+          Booked ({bookedBookings.length})
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('refunds')}
+          onClick={() => handleTabChange('refunds')}
           style={{
             padding: '0.6rem 1.2rem',
             background: 'none',
@@ -226,7 +216,7 @@ const BookingsPage = () => {
             cursor: 'pointer',
           }}
         >
-          Refunds ({refundBookingsList.length})
+          Cancelled ({cancelledBookings.length})
         </button>
       </div>
 
@@ -234,7 +224,7 @@ const BookingsPage = () => {
         <div className="loading-state">Loading your reservations...</div>
       ) : activeBookingsList.length === 0 ? (
         <div className="empty-state">
-          {activeTab === 'refunds' ? 'No refund records found.' : 'You have no active bookings.'}
+          {activeTab === 'refunds' ? 'No cancelled reservations found.' : 'No booked reservations found.'}
         </div>
       ) : (
         <div className="bookings-list">
@@ -245,24 +235,23 @@ const BookingsPage = () => {
                   <span className="booking-guest">{booking.guestName}</span>
                   <span className="booking-phone"> ({booking.guestPhone})</span>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                  {renderPaymentStatusBadge(booking.paymentStatus)}
-                  {booking.refundStatus && booking.refundStatus !== 'none' && renderRefundStatusBadge(booking.refundStatus)}
-                  <span className="booking-status-badge confirmed" style={booking.status === 'cancelled' ? { background: '#f1f5f9', color: '#64748b' } : {}}>
-                    {booking.status ? booking.status.toUpperCase() : 'PENDING'}
-                  </span>
-                </div>
+                <BookingStatusGroup
+                  paymentStatus={booking.paymentStatus}
+                  refundStatus={booking.refundStatus}
+                  bookingStatus={booking.status}
+                />
               </div>
 
               <div className="booking-card-body">
                 <p>
-                  <strong>Room:</strong>{' '}
-                  {booking.roomId
-                    ? `Room ${booking.roomId.number} (${booking.roomId.type})`
-                    : 'Room details unavailable'}
+                  <strong>Room Type:</strong>{' '}
+                  {booking.roomId ? booking.roomId.type : 'Room details unavailable'}
                 </p>
                 <p>
                   <strong>Check-In:</strong> {formatDate(booking.checkIn)} | <strong>Check-Out:</strong> {formatDate(booking.checkOut)}
+                </p>
+                <p style={{ margin: '0.25rem 0', color: '#64748b', fontSize: '0.85rem' }}>
+                  <strong>Booked On:</strong> {formatDateTime(booking.createdAt)}
                 </p>
 
                 {/* Transaction IDs Section */}
@@ -317,7 +306,7 @@ const BookingsPage = () => {
                     )}
                     {booking.refundedAt && (
                       <p style={{ margin: '0.1rem 0 0 0', color: '#64748b' }}>
-                        <strong>Refunded On:</strong> {formatDate(booking.refundedAt)}
+                        <strong>Refunded On:</strong> {formatDateTime(booking.refundedAt)}
                       </p>
                     )}
                   </div>
