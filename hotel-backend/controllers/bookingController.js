@@ -151,19 +151,84 @@ const syncPendingRefunds = async (bookingsList) => {
   }
 };
 
-// GET /api/bookings (Admin only)
+// GET /api/bookings (Admin only - supports independent bookedPeriod, stayPeriod, and roomType filters)
 const getAllBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find()
+    const { filter, period, bookedPeriod, stayPeriod, roomType } = req.query;
+    const activeBookedPeriod = bookedPeriod || filter || period || "all";
+    const activeStayPeriod = stayPeriod || "all";
+    const activeRoomType = roomType || "all";
+
+    let filterQuery = {};
+    const now = new Date();
+
+    // 1. BOOKED DATE FILTER (createdAt - when reservation was created)
+    if (activeBookedPeriod !== "all") {
+      let bStart, bEnd;
+      if (activeBookedPeriod === "today") {
+        bStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        bEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      } else if (activeBookedPeriod === "this_week") {
+        const dayOfWeek = now.getDay();
+        const diffToMonday = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        bStart = new Date(now.getFullYear(), now.getMonth(), diffToMonday, 0, 0, 0, 0);
+        bEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      } else if (activeBookedPeriod === "this_month") {
+        bStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        bEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      }
+
+      if (bStart && bEnd) {
+        filterQuery.createdAt = { $gte: bStart, $lte: bEnd };
+      }
+    }
+
+    // 2. CHECK-IN DATE FILTER (checkIn date range only)
+    if (activeStayPeriod !== "all") {
+      let sStart, sEnd;
+      if (activeStayPeriod === "today") {
+        sStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        sEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      } else if (activeStayPeriod === "this_week") {
+        const dayOfWeek = now.getDay();
+        const diffToMonday = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        sStart = new Date(now.getFullYear(), now.getMonth(), diffToMonday, 0, 0, 0, 0);
+        const endOfWeekDay = diffToMonday + 6;
+        sEnd = new Date(now.getFullYear(), now.getMonth(), endOfWeekDay, 23, 59, 59, 999);
+      } else if (activeStayPeriod === "this_month") {
+        sStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        sEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      }
+
+      if (sStart && sEnd) {
+        filterQuery.checkIn = { $gte: sStart, $lte: sEnd };
+      }
+    }
+
+
+    // 3. ROOM TYPE FILTER (associated room category)
+    if (activeRoomType !== "all") {
+      const matchingRooms = await Room.find({ type: activeRoomType }).select("_id");
+      const matchingRoomIds = matchingRooms.map((r) => r._id);
+      filterQuery.roomId = { $in: matchingRoomIds };
+    }
+
+    const bookings = await Booking.find(filterQuery)
       .sort({ createdAt: -1 })
       .populate("roomId")
       .populate("userId", "name email role");
+
     await syncPendingRefunds(bookings);
     res.status(200).json(bookings);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
+
+
+
+
 
 // GET /api/bookings/my-bookings (Protected)
 const getMyBookings = async (req, res) => {

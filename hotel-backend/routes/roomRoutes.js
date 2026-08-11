@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   getAllRooms,
   getAvailableRooms,
+  getRoomStats,
   createRoomType,
   updateRoomType,
   deleteRoomType,
@@ -11,6 +12,7 @@ const { protect, adminOnly } = require("../middleware/auth");
 
 router.get("/", getAllRooms);
 router.get("/available", getAvailableRooms);
+router.get("/stats", protect, adminOnly, getRoomStats);
 
 // Admin-only Room Management Endpoints
 router.post("/", protect, adminOnly, createRoomType);
@@ -18,3 +20,4 @@ router.put("/:typeKey", protect, adminOnly, updateRoomType);
 router.delete("/:typeKey", protect, adminOnly, deleteRoomType);
 
 module.exports = router;
+

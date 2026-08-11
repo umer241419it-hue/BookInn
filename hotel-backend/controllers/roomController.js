@@ -4,21 +4,47 @@ const { getBookedRoomIds } = require("../utils/availability");
 
 /**
  * Helper to group array of Room documents by type into category summaries.
+ * Accepts optional bookedRoomIds array to calculate date-specific availability status.
  */
-const groupRoomsByType = (rooms) => {
+const groupRoomsByType = (rooms, bookedRoomIds = []) => {
+  const bookedSet = new Set(bookedRoomIds.map((id) => id.toString()));
+
   const grouped = rooms.reduce((acc, room) => {
     const key = room.type;
+    const isBooked = bookedSet.has(room._id.toString());
+
     if (!acc[key]) {
       acc[key] = {
         type: room.type,
         price: room.price,
         capacity: room.capacity,
+        totalCount: 0,
+        availableCount: 0,
+        isAvailable: true,
         count: 0,
         roomIds: [],
+        availableRoomIds: [],
+        images: room.images && room.images.length > 0 ? room.images : [],
       };
     }
-    acc[key].count += 1;
+
+    acc[key].totalCount += 1;
     acc[key].roomIds.push(room._id);
+
+    // Merge any images if present on room document
+    if ((!acc[key].images || acc[key].images.length === 0) && room.images && room.images.length > 0) {
+      acc[key].images = room.images;
+    }
+
+    if (!isBooked) {
+      acc[key].availableCount += 1;
+      acc[key].availableRoomIds.push(room._id);
+    }
+
+    acc[key].isAvailable = acc[key].availableCount > 0;
+    // 'count' property is set to availableCount if availability check run, else totalCount
+    acc[key].count = bookedRoomIds.length > 0 ? acc[key].availableCount : acc[key].totalCount;
+
     return acc;
   }, {});
 
@@ -29,7 +55,7 @@ const groupRoomsByType = (rooms) => {
 const getAllRooms = async (req, res) => {
   try {
     const rooms = await Room.find();
-    const grouped = groupRoomsByType(rooms);
+    const grouped = groupRoomsByType(rooms, []);
     res.status(200).json(grouped);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -59,21 +85,75 @@ const getAvailableRooms = async (req, res) => {
     // Get IDs of rooms that are booked during this range
     const bookedRoomIds = await getBookedRoomIds(checkInDate, checkOutDate);
 
-    // Get all rooms NOT in that set
-    const availableRooms = await Room.find({ _id: { $nin: bookedRoomIds } });
+    // Fetch ALL rooms so frontend displays all room categories with availability status (AVAILABLE vs BOOKED)
+    const allRooms = await Room.find();
 
-    // Group by category type for guest display
-    const grouped = groupRoomsByType(availableRooms);
+    const grouped = groupRoomsByType(allRooms, bookedRoomIds);
     res.status(200).json(grouped);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
+// GET /api/rooms/stats (Admin: Dashboard total rooms, booked rooms, and monthly revenue)
+const getRoomStats = async (req, res) => {
+  try {
+    const totalRooms = await Room.countDocuments();
+
+    // Distinct rooms with active/future confirmed or pending bookings
+    const now = new Date();
+    const bookedRoomIdsRaw = await Booking.distinct("roomId", {
+      status: { $in: ["confirmed", "pending"] },
+      checkOut: { $gte: now },
+    });
+
+    const bookedRoomsCount = bookedRoomIdsRaw.length;
+    const availableRoomsCount = Math.max(0, totalRooms - bookedRoomsCount);
+
+    const totalBookingsCount = await Booking.countDocuments();
+    const cancelledBookingsCount = await Booking.countDocuments({ status: "cancelled" });
+
+    // Monthly Revenue: Valid paid non-cancelled bookings created in current calendar month (createdAt)
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const monthlyPaidBookings = await Booking.find({
+      status: { $ne: "cancelled" },
+      paymentStatus: "paid",
+      createdAt: { $gte: startOfMonth, $lte: endOfMonth },
+    }).populate("roomId");
+
+    const monthlyRevenue = monthlyPaidBookings.reduce((sum, b) => {
+      if (typeof b.amountPaid === "number" && b.amountPaid > 0) {
+        return sum + b.amountPaid;
+      }
+      if (b.roomId && b.roomId.price) {
+        const cIn = new Date(b.checkIn);
+        const cOut = new Date(b.checkOut);
+        const nights = Math.max(1, Math.ceil((cOut - cIn) / (1000 * 60 * 60 * 24)));
+        return sum + nights * b.roomId.price;
+      }
+      return sum;
+    }, 0);
+
+    res.status(200).json({
+      totalRooms,
+      bookedRooms: bookedRoomsCount,
+      availableRooms: availableRoomsCount,
+      totalBookings: totalBookingsCount,
+      cancelledBookings: cancelledBookingsCount,
+      monthlyRevenue,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
 // POST /api/rooms (Admin: Create new room type)
 const createRoomType = async (req, res) => {
   try {
-    const { type, price, capacity, totalRooms } = req.body;
+    const { type, price, capacity, totalRooms, images } = req.body;
 
     if (!type || !type.trim()) {
       return res.status(400).json({ error: "Room Type name cannot be empty" });
@@ -97,23 +177,24 @@ const createRoomType = async (req, res) => {
 
     const trimmedType = type.trim();
 
+    // Clean images array
+    const imagesArray = Array.isArray(images)
+      ? images.filter((img) => typeof img === "string" && img.trim().length > 0)
+      : [];
+
     // Check if room type already exists
     const existing = await Room.findOne({ type: new RegExp(`^${trimmedType}$`, "i") });
     if (existing) {
       return res.status(400).json({ error: `Room type '${trimmedType}' already exists` });
     }
 
-    // Prefix for room numbers
-    const prefix = trimmedType.replace(/[^a-zA-Z0-9]/g, "").substring(0, 4).toUpperCase() || "RM";
-    const timestamp = Date.now().toString().slice(-4);
-
     const roomsToCreate = [];
     for (let i = 1; i <= countNum; i++) {
       roomsToCreate.push({
-        number: `${prefix}-${timestamp}-${i}`,
         type: trimmedType,
         price: priceNum,
         capacity: capacityNum,
+        images: imagesArray,
       });
     }
 
@@ -131,7 +212,7 @@ const createRoomType = async (req, res) => {
 const updateRoomType = async (req, res) => {
   try {
     const { typeKey } = req.params;
-    const { type, price, capacity, totalRooms } = req.body;
+    const { type, price, capacity, totalRooms, images } = req.body;
 
     if (!type || !type.trim()) {
       return res.status(400).json({ error: "Room Type name cannot be empty" });
@@ -156,6 +237,11 @@ const updateRoomType = async (req, res) => {
     const decodedOriginalType = decodeURIComponent(typeKey);
     const trimmedNewType = type.trim();
 
+    // Clean images array
+    const imagesArray = Array.isArray(images)
+      ? images.filter((img) => typeof img === "string" && img.trim().length > 0)
+      : [];
+
     // Find all physical rooms for this type
     const existingRooms = await Room.find({ type: decodedOriginalType });
 
@@ -171,10 +257,10 @@ const updateRoomType = async (req, res) => {
       }
     }
 
-    // Update details (type name, price, capacity) across all existing rooms
+    // Update details (type name, price, capacity, images) across all existing rooms
     await Room.updateMany(
       { type: decodedOriginalType },
-      { $set: { type: trimmedNewType, price: priceNum, capacity: capacityNum } }
+      { $set: { type: trimmedNewType, price: priceNum, capacity: capacityNum, images: imagesArray } }
     );
 
     const currentCount = existingRooms.length;
@@ -182,19 +268,18 @@ const updateRoomType = async (req, res) => {
     if (countNum > currentCount) {
       // Need to add (countNum - currentCount) new room instances
       const diff = countNum - currentCount;
-      const prefix = trimmedNewType.replace(/[^a-zA-Z0-9]/g, "").substring(0, 4).toUpperCase() || "RM";
-      const timestamp = Date.now().toString().slice(-4);
 
       const newRooms = [];
       for (let i = 1; i <= diff; i++) {
         newRooms.push({
-          number: `${prefix}-${timestamp}-ADD${i}`,
           type: trimmedNewType,
           price: priceNum,
           capacity: capacityNum,
+          images: imagesArray,
         });
       }
       await Room.insertMany(newRooms);
+
     } else if (countNum < currentCount) {
       // Need to reduce inventory by (currentCount - countNum)
       const toRemoveCount = currentCount - countNum;
@@ -267,7 +352,9 @@ const deleteRoomType = async (req, res) => {
 module.exports = {
   getAllRooms,
   getAvailableRooms,
+  getRoomStats,
   createRoomType,
   updateRoomType,
   deleteRoomType,
 };
+

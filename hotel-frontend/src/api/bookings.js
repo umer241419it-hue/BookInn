@@ -10,8 +10,8 @@ export const getMyBookings = async () => {
   return response.data;
 };
 
-export const getAllBookings = async () => {
-  const response = await api.get('/bookings');
+export const getAllBookings = async (params = {}) => {
+  const response = await api.get('/bookings', { params });
   return response.data;
 };
 
@@ -19,3 +19,4 @@ export const cancelBooking = async (id) => {
   const response = await api.delete(`/bookings/${id}`);
   return response.data;
 };
+

@@ -326,12 +326,6 @@ body {
   margin-bottom: 0.875rem;
 }
 
-.room-number {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--primary-color);
-}
-
 .room-type-badge {
   background: #faf4e8;
   color: #8f6d28;

@@ -14,12 +14,15 @@ const Booking = require("../models/Booking");
  */
 const getBookedRoomIds = async (checkIn, checkOut) => {
   const conflictingBookings = await Booking.find({
-    $or: [{ status: "confirmed" }, { paymentStatus: "paid" }],
+    status: { $ne: "cancelled" },
     checkIn: { $lt: checkOut },   // existing starts before our checkout
     checkOut: { $gt: checkIn },   // existing ends after our checkin
   }).select("roomId");
 
-  return conflictingBookings.map((b) => b.roomId);
+  return conflictingBookings
+    .map((b) => b.roomId)
+    .filter(Boolean);
 };
+
 
 module.exports = { getBookedRoomIds };

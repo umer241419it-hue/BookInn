@@ -2,11 +2,6 @@ const mongoose = require("mongoose");
 
 const roomSchema = new mongoose.Schema(
   {
-    number: {
-      type: String,
-      required: true,
-      unique: true,
-    },
     type: {
       type: String,
       required: true,
@@ -19,8 +14,14 @@ const roomSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    images: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true }
 );
 
 module.exports = mongoose.model("Room", roomSchema);
+
+

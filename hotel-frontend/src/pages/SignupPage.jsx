@@ -95,10 +95,10 @@ const SignupPage = () => {
                   fontSize: '0.9rem',
                 }}
               >
-                <option value="+91">🇮🇳 +91 (IN)</option>
-                <option value="+1">🇺🇸 +1 (US)</option>
-                <option value="+44">🇬🇧 +44 (UK)</option>
-                <option value="+971">🇦🇪 +971 (UAE)</option>
+                <option value="+91">+91 (IN)</option>
+                <option value="+1">+1 (US)</option>
+                <option value="+44">+44 (UK)</option>
+                <option value="+971">+971 (UAE)</option>
               </select>
               <input
                 type="tel"

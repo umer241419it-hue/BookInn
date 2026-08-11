@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { X, ShieldCheck, CheckCircle2, AlertTriangle, CreditCard } from 'lucide-react';
+import { X, ShieldCheck, CheckCircle2, AlertTriangle, CreditCard, Calendar } from 'lucide-react';
 import { createBooking } from '../api/bookings';
+
 import { createRazorpayOrder, verifyRazorpayPayment } from '../api/payments';
 import { formatPriceINR } from '../utils/formatCurrency';
 import Logo from './Logo';
@@ -264,6 +265,56 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
 
         {!success && !paymentFailed && !verifying && (
           <form onSubmit={handleSubmit} className="booking-form">
+            {/* Stay & Price Summary Card */}
+            {checkIn && checkOut ? (
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem', color: 'var(--primary-color)', fontWeight: 600 }}>
+                  <Calendar size={18} /> Reserved Stay Dates
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.9rem', color: '#334155' }}>
+                  <div>
+                    <span style={{ color: '#64748b', fontSize: '0.8rem', display: 'block' }}>Check-In Date</span>
+                    <strong>{new Date(checkIn).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748b', fontSize: '0.8rem', display: 'block' }}>Check-Out Date</span>
+                    <strong>{new Date(checkOut).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</strong>
+                  </div>
+                </div>
+                <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                    {Math.max(1, Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)))} {Math.max(1, Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24))) === 1 ? 'Night' : 'Nights'} × {formatPriceINR(room.price)}
+                  </span>
+                  <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>
+                    Total: {formatPriceINR(Math.max(1, Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24))) * (room.price || 0))}
+                  </strong>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="form-group">
+                  <label htmlFor="modalCheckIn">Check-In Date *</label>
+                  <input
+                    type="date"
+                    id="modalCheckIn"
+                    value={checkIn}
+                    onChange={(e) => setCheckIn(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="modalCheckOut">Check-Out Date *</label>
+                  <input
+                    type="date"
+                    id="modalCheckOut"
+                    value={checkOut}
+                    onChange={(e) => setCheckOut(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="form-group">
               <label htmlFor="guestName">Guest Full Name *</label>
               <input
@@ -288,28 +339,6 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="modalCheckIn">Check-In Date *</label>
-              <input
-                type="date"
-                id="modalCheckIn"
-                value={checkIn}
-                onChange={(e) => setCheckIn(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="modalCheckOut">Check-Out Date *</label>
-              <input
-                type="date"
-                id="modalCheckOut"
-                value={checkOut}
-                onChange={(e) => setCheckOut(e.target.value)}
-                required
-              />
-            </div>
-
             <div className="modal-footer">
               <button type="button" className="btn-cancel" onClick={onClose} disabled={loading}>
                 Cancel
@@ -323,6 +352,7 @@ const BookingModal = ({ room, initialCheckIn = '', initialCheckOut = '', onClose
       </div>
     </div>
   );
+
 
   return ReactDOM.createPortal(modalMarkup, document.body);
 };

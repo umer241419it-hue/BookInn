@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Clock, CreditCard, ShieldCheck, Mail, Phone, MapPin } from 'lucide-react';
+import { Sparkles, Clock, CreditCard, ShieldCheck, Mail, Phone, MapPin, Target, Eye } from 'lucide-react';
 import Logo from '../components/Logo';
 
 const AboutPage = () => {
@@ -14,26 +14,26 @@ const AboutPage = () => {
           padding: '3rem 2rem',
           textAlign: 'center',
           marginBottom: '2.5rem',
-          boxShadow: '0 8px 30px rgba(26, 43, 60, 0.15)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
         }}
       >
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+        <div style={{ display: 'inline-block', marginBottom: '1rem' }}>
           <Logo size="large" variant="light" />
         </div>
-        <h1 style={{ fontSize: '2.25rem', fontWeight: 800, marginBottom: '1rem', letterSpacing: '-0.02em' }}>
-          Redefining Hospitality & Luxury Bookings
+
+        <h1 style={{ fontSize: '2.25rem', fontWeight: 700, marginBottom: '0.75rem', color: '#ffffff' }}>
+          Welcome to BookInn
         </h1>
         <p
           style={{
-            maxWidth: '750px',
-            margin: '0 auto',
             fontSize: '1.1rem',
             color: 'rgba(255, 255, 255, 0.85)',
+            maxWidth: '700px',
+            margin: '0 auto',
             lineHeight: 1.6,
           }}
         >
-          BookInn is a premier hotel management and reservation platform designed to deliver frictionless booking experiences, instant real-time room availability, and enterprise-grade payment verification.
+          Redefining luxury hotel reservations with instant availability, cryptographically verified payments, and automated refund processing.
         </p>
       </section>
 
@@ -56,7 +56,7 @@ const AboutPage = () => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}>🎯</span>
+            <Target size={22} style={{ color: 'var(--accent-color)' }} />
             <h2 style={{ fontSize: '1.35rem', color: 'var(--primary-color)', margin: 0 }}>Our Mission</h2>
           </div>
           <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
@@ -74,7 +74,7 @@ const AboutPage = () => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '1.5rem', color: 'var(--accent-color)' }}>👁️</span>
+            <Eye size={22} style={{ color: 'var(--accent-color)' }} />
             <h2 style={{ fontSize: '1.35rem', color: 'var(--primary-color)', margin: 0 }}>Our Vision</h2>
           </div>
           <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
