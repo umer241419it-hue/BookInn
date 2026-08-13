@@ -75,9 +75,11 @@ const SearchPage = () => {
     try {
       const data = await getAvailableRooms(checkIn, checkOut);
       setRooms(data);
+      return data;
     } catch (err) {
       console.error('Error searching rooms:', err);
       setError(err.response?.data?.error || 'Failed to search available rooms.');
+      return [];
     } finally {
       setLoading(false);
     }
@@ -89,13 +91,8 @@ const SearchPage = () => {
 
   const handleBookingClick = (room) => {
     if (isAdmin) return;
-    if (!isLoggedIn) {
-      // Redirect logged-out user to login page
-      navigate('/login', { state: { from: location } });
-      return;
-    }
 
-    // Step 2 & 3: If dates are not set yet, prompt date selection first
+    // Step 1: If stay dates are not set yet, prompt date selection for availability (accessible to unauthenticated visitors)
     if (!searchDates.checkIn || !searchDates.checkOut) {
       const todayStr = new Date().toISOString().split('T')[0];
       const tomorrow = new Date();
@@ -109,7 +106,13 @@ const SearchPage = () => {
       return;
     }
 
-    // Step 5: If dates are set, open final booking review & payment modal
+    // Step 2: If stay dates are set, require login before placing a booking
+    if (!isLoggedIn) {
+      navigate('/login', { state: { from: location } });
+      return;
+    }
+
+    // Step 3: If authenticated, open final booking review & payment modal
     setSelectedRoom(room);
   };
 
@@ -138,12 +141,16 @@ const SearchPage = () => {
     const cOut = promptCheckOut;
     setDatePromptRoom(null);
 
-    // Call backend availability API with dates
-    await handleSearch(cIn, cOut);
+    // Call backend availability API with dates and update searchDates
+    const searchData = await handleSearch(cIn, cOut);
 
-    // Proceed to booking modal if room is available
-    if (roomToBook) {
-      setSelectedRoom(roomToBook);
+    // For authenticated users: open booking modal only if selected room is available for those dates
+    if (roomToBook && isLoggedIn && Array.isArray(searchData)) {
+      const targetCategory = searchData.find((r) => r.type === roomToBook.type);
+      const isAvailable = targetCategory ? targetCategory.isAvailable : true;
+      if (isAvailable) {
+        setSelectedRoom(roomToBook);
+      }
     }
   };
 

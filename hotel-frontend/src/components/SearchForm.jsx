@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Search, RotateCcw, AlertTriangle } from 'lucide-react';
 
 const SearchForm = ({ onSearch, onClear, activeCheckIn = '', activeCheckOut = '' }) => {
   const [checkIn, setCheckIn] = useState(activeCheckIn);
   const [checkOut, setCheckOut] = useState(activeCheckOut);
   const [formError, setFormError] = useState('');
+
+  // Keep local input fields in sync when active check-in or check-out dates change in parent SearchPage
+  useEffect(() => {
+    setCheckIn(activeCheckIn);
+    setCheckOut(activeCheckOut);
+  }, [activeCheckIn, activeCheckOut]);
 
   const todayStr = new Date().toISOString().split('T')[0];
 
