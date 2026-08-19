@@ -5,7 +5,7 @@
 # Tech Stack: Node.js 22.x, MongoDB 8.x, PM2, Nginx, Express, React + Vite
 # ==============================================================================
 
-set -eo pipefail
+set -e
 
 echo "=================================================="
 echo "  Starting BookInn Automated Production Deployment"
@@ -100,7 +100,7 @@ systemctl enable nginx
 systemctl restart nginx
 
 # ------------------------------------------------------------------------------
-# 7. Backend Dependencies
+# 6. Backend Dependencies Installation
 # ------------------------------------------------------------------------------
 echo "[+] Installing backend dependencies..."
 if [ -d "$BACKEND_DIR" ]; then
@@ -112,7 +112,7 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 8 & 9. Configure Backend Environment (.env)
+# 7. Configure Backend Environment (.env)
 # ------------------------------------------------------------------------------
 echo "[+] Configuring backend .env file..."
 PORT_VAL="${PORT:-5000}"
@@ -160,7 +160,7 @@ if [ -z "$RAZORPAY_KEY_ID_VAL" ] || [ -z "$RAZORPAY_KEY_SECRET_VAL" ]; then
 fi
 
 # ------------------------------------------------------------------------------
-# 10 & 11. MongoDB Seed Data Import
+# 8. MongoDB Seed Data Import (Optional)
 # ------------------------------------------------------------------------------
 echo "[+] Checking for initial MongoDB seed data..."
 SEED_IMPORTED=false
@@ -193,7 +193,6 @@ for sdir in "${SEED_DIRS[@]}"; do
         for jfile in "$sdir"/*.json; do
             if [ -f "$jfile" ]; then
                 base=$(basename "$jfile" .json)
-                # extract collection name (e.g. bookinn.users -> users, users -> users)
                 coll=$(echo "$base" | sed -e 's/^bookinn\.//')
                 import_seed_data "$jfile" "$coll"
             fi
@@ -206,15 +205,35 @@ if [ "$SEED_IMPORTED" = false ]; then
 fi
 
 # ------------------------------------------------------------------------------
-# 12, 13 & 14. Frontend Dependencies, Environment & Production Build
+# 9. Frontend Dependencies, Environment & Production Build
 # ------------------------------------------------------------------------------
 echo "[+] Configuring and building frontend..."
+
+# Detect Public IP dynamically
+TOKEN=$(curl -s -S -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 60" 2>/dev/null || true)
+PUBLIC_IP=""
+if [ -n "$TOKEN" ]; then
+    PUBLIC_IP=$(curl -s -S -H "X-aws-ec2-metadata-token: $TOKEN" "http://169.254.169.254/latest/meta-data/public-ipv4" 2>/dev/null || true)
+fi
+
+if [ -z "$PUBLIC_IP" ]; then
+    PUBLIC_IP=$(curl -s --connect-timeout 3 https://checkip.amazonaws.com 2>/dev/null || curl -s --connect-timeout 3 https://ifconfig.me 2>/dev/null || echo "127.0.0.1")
+fi
+
+if [ -n "$VITE_API_URL" ]; then
+    FRONTEND_API_URL="$VITE_API_URL"
+elif [ -n "$PUBLIC_IP" ] && [ "$PUBLIC_IP" != "127.0.0.1" ]; then
+    FRONTEND_API_URL="http://${PUBLIC_IP}/api"
+else
+    FRONTEND_API_URL="/api"
+fi
+
 if [ -d "$FRONTEND_DIR" ]; then
     cd "$FRONTEND_DIR"
     
-    # Configure frontend .env for Nginx proxying
+    # Configure frontend .env
     cat > "$FRONTEND_DIR/.env" <<EOF
-VITE_API_URL=/api
+VITE_API_URL=$FRONTEND_API_URL
 VITE_RAZORPAY_KEY_ID=$RAZORPAY_KEY_ID_VAL
 EOF
     
@@ -226,20 +245,9 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 15. Nginx Configuration & Permissions
+# 10. Nginx Configuration & Permissions
 # ------------------------------------------------------------------------------
-echo "[+] Configuring Nginx reverse proxy..."
-
-# Detect Public IP
-TOKEN=$(curl -s -S -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 60" 2>/dev/null || true)
-PUBLIC_IP=""
-if [ -n "$TOKEN" ]; then
-    PUBLIC_IP=$(curl -s -S -H "X-aws-ec2-metadata-token: $TOKEN" "http://169.254.169.254/latest/meta-data/public-ipv4" 2>/dev/null || true)
-fi
-
-if [ -z "$PUBLIC_IP" ]; then
-    PUBLIC_IP=$(curl -s --connect-timeout 3 https://checkip.amazonaws.com 2>/dev/null || curl -s --connect-timeout 3 https://ifconfig.me 2>/dev/null || echo "_")
-fi
+echo "[+] Configuring Nginx reverse proxy and SPA routing..."
 
 NGINX_CONF="/etc/nginx/sites-available/bookinn"
 cat > "$NGINX_CONF" <<EOF
@@ -256,7 +264,7 @@ server {
         try_files \$uri \$uri/ /index.html;
     }
 
-    # Express Backend API Proxy
+    # Express Backend API Reverse Proxy
     location /api/ {
         proxy_pass http://127.0.0.1:$PORT_VAL/api/;
         proxy_http_version 1.1;
@@ -278,13 +286,16 @@ server {
 }
 EOF
 
-# Enable BookInn site and disable default site
+# Enable BookInn site and remove default site
 ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/bookinn
 rm -f /etc/nginx/sites-enabled/default
 
-# Ensure Nginx (www-data) can traverse directory structure to read /dist
+# Set directory permissions for www-data traversal without world-writable risks
 echo "[+] Setting safe directory permissions for Nginx and user..."
 chmod 755 "$USER_HOME" 2>/dev/null || chmod o+x "$USER_HOME" || true
+if [ -d "$USER_HOME/apps" ]; then
+    chmod 755 "$USER_HOME/apps"
+fi
 chmod 755 "$SCRIPT_DIR"
 chmod 755 "$FRONTEND_DIR"
 chmod -R 755 "$FRONTEND_DIR/dist"
@@ -294,7 +305,7 @@ nginx -t
 systemctl reload nginx
 
 # ------------------------------------------------------------------------------
-# 16. Start Backend with PM2
+# 11. Start Backend with PM2
 # ------------------------------------------------------------------------------
 echo "[+] Starting backend with PM2 under user: $ACTUAL_USER..."
 
@@ -311,42 +322,88 @@ env PATH="$PATH" pm2 startup systemd -u "$ACTUAL_USER" --hp "$USER_HOME" --silen
 sudo -u "$ACTUAL_USER" -i env PATH="$PATH" pm2 save
 
 # ------------------------------------------------------------------------------
-# 17. Validations & Health Checks
+# 12. Validations & Health Checks (Strict Failure on Critical Issues)
 # ------------------------------------------------------------------------------
 echo "[+] Running deployment health checks..."
-sleep 2
 
-MONGOD_STATUS=$(systemctl is-active mongod || echo "inactive")
-NGINX_STATUS=$(systemctl is-active nginx || echo "inactive")
-
-# Test backend direct
-HTTP_BACKEND=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:$PORT_VAL/api/rooms" || true)
-
-# Test Nginx API proxy
-HTTP_API=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1/api/rooms" || true)
-
-# Test Nginx Frontend
-HTTP_FRONTEND=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1/" || true)
-
-if [ "$MONGOD_STATUS" != "active" ]; then
-    WARNINGS+=("MongoDB service is not in active state (Status: $MONGOD_STATUS).")
+# Check MongoDB service
+if ! systemctl is-active --quiet mongod; then
+    echo "[-] CRITICAL: MongoDB service (mongod) is not active!" >&2
+    systemctl status mongod --no-pager || true
+    exit 1
 fi
+echo "[+] MongoDB service: ACTIVE"
 
-if [ "$NGINX_STATUS" != "active" ]; then
-    WARNINGS+=("Nginx service is not in active state (Status: $NGINX_STATUS).")
+# Check Nginx service
+if ! systemctl is-active --quiet nginx; then
+    echo "[-] CRITICAL: Nginx service is not active!" >&2
+    systemctl status nginx --no-pager || true
+    exit 1
 fi
+echo "[+] Nginx service: ACTIVE"
 
-if [ "$HTTP_FRONTEND" != "200" ]; then
-    WARNINGS+=("Frontend health check returned HTTP $HTTP_FRONTEND (expected 200). Check Nginx logs: /var/log/nginx/error.log")
+# Check PM2 backend process
+PM2_STATUS=$(sudo -u "$ACTUAL_USER" -i env PATH="$PATH" pm2 jlist 2>/dev/null | grep -o '"name":"bookinn-backend","pm_id":[0-9]*,"monit":{[^}]*},"pm2_env":{"status":"online"' || true)
+if [ -z "$PM2_STATUS" ]; then
+    echo "[-] CRITICAL: PM2 process 'bookinn-backend' is not in online status!" >&2
+    sudo -u "$ACTUAL_USER" -i env PATH="$PATH" pm2 status || true
+    sudo -u "$ACTUAL_USER" -i env PATH="$PATH" pm2 logs bookinn-backend --lines 20 --nostream || true
+    exit 1
 fi
+echo "[+] PM2 process 'bookinn-backend': ONLINE"
+
+# Health check with retry loop (allowing Express DB connection to settle)
+echo "[+] Verifying HTTP endpoints..."
+BACKEND_OK=false
+NGINX_API_OK=false
+FRONTEND_OK=false
+
+for i in {1..10}; do
+    # Direct backend check
+    HTTP_BACKEND=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:$PORT_VAL/api/rooms" 2>/dev/null || true)
+    # Nginx API proxy check
+    HTTP_API=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1/api/rooms" 2>/dev/null || true)
+    # Nginx Frontend check
+    HTTP_FRONTEND=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1/" 2>/dev/null || true)
+
+    if [ "$HTTP_BACKEND" = "200" ]; then BACKEND_OK=true; fi
+    if [ "$HTTP_API" = "200" ]; then NGINX_API_OK=true; fi
+    if [ "$HTTP_FRONTEND" = "200" ]; then FRONTEND_OK=true; fi
+
+    if [ "$BACKEND_OK" = true ] && [ "$NGINX_API_OK" = true ] && [ "$FRONTEND_OK" = true ]; then
+        break
+    fi
+    sleep 2
+done
+
+if [ "$BACKEND_OK" != true ]; then
+    echo "[-] CRITICAL: Backend endpoint http://127.0.0.1:$PORT_VAL/api/rooms returned HTTP $HTTP_BACKEND (expected 200)!" >&2
+    sudo -u "$ACTUAL_USER" -i env PATH="$PATH" pm2 logs bookinn-backend --lines 25 --nostream || true
+    exit 1
+fi
+echo "[+] Backend endpoint check: OK (HTTP 200)"
+
+if [ "$NGINX_API_OK" != true ]; then
+    echo "[-] CRITICAL: Nginx reverse proxy endpoint http://127.0.0.1/api/rooms returned HTTP $HTTP_API (expected 200)!" >&2
+    tail -n 25 /var/log/nginx/error.log || true
+    exit 1
+fi
+echo "[+] Nginx API proxy check: OK (HTTP 200)"
+
+if [ "$FRONTEND_OK" != true ]; then
+    echo "[-] CRITICAL: Nginx frontend endpoint http://127.0.0.1/ returned HTTP $HTTP_FRONTEND (expected 200)!" >&2
+    tail -n 25 /var/log/nginx/error.log || true
+    exit 1
+fi
+echo "[+] Nginx frontend SPA check: OK (HTTP 200)"
 
 DISPLAY_IP="$PUBLIC_IP"
-if [ "$DISPLAY_IP" = "_" ]; then
+if [ "$DISPLAY_IP" = "127.0.0.1" ] || [ "$DISPLAY_IP" = "_" ]; then
     DISPLAY_IP="<EC2_PUBLIC_IP>"
 fi
 
 # ------------------------------------------------------------------------------
-# 18. Final Deployment Summary
+# 13. Final Deployment Summary
 # ------------------------------------------------------------------------------
 echo ""
 echo "========================================"
@@ -363,13 +420,13 @@ echo "MongoDB:"
 echo "localhost:27017/bookinn"
 echo ""
 echo "PM2:"
-echo "bookinn-backend"
+echo "bookinn-backend (online)"
 echo ""
 echo "Nginx:"
-echo "$NGINX_STATUS"
+echo "active"
 echo ""
 echo "MongoDB:"
-echo "$MONGOD_STATUS"
+echo "active"
 echo ""
 
 if [ ${#WARNINGS[@]} -gt 0 ]; then
