@@ -1,0 +1,407 @@
+[{
+  "_id": {
+    "$oid": "6a6dbd20bd330a4bdc7d1f7a"
+  },
+  "roomId": {
+    "$oid": "6a6b54e74de56a2fb9ad10ac"
+  },
+  "userId": {
+    "$oid": "6a6c377cffa188846812b07c"
+  },
+  "guestName": "nice",
+  "guestPhone": "7894564562",
+  "checkIn": {
+    "$date": "2026-08-08T00:00:00.000Z"
+  },
+  "checkOut": {
+    "$date": "2026-08-15T00:00:00.000Z"
+  },
+  "status": "cancelled",
+  "paymentStatus": "paid",
+  "refundStatus": "processed",
+  "createdAt": {
+    "$date": "2026-08-01T09:32:16.562Z"
+  },
+  "updatedAt": {
+    "$date": "2026-08-06T15:14:44.589Z"
+  },
+  "__v": 0,
+  "razorpayOrderId": "order_TKSOzle5ssYS6a",
+  "amountPaid": 10500,
+  "razorpayPaymentId": "pay_TKSP5ukFaK1H9K",
+  "refundAmount": 10500,
+  "razorpayRefundId": "rfnd_TKSQwRTq570eNl",
+  "refundedAt": {
+    "$date": "2026-08-01T09:34:07.000Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a6dbd48bd330a4bdc7d1f87"
+  },
+  "roomId": {
+    "$oid": "6a6c39ce22c61b0eb99e7078"
+  },
+  "userId": {
+    "$oid": "6a6c377cffa188846812b07c"
+  },
+  "guestName": "kalwa",
+  "guestPhone": "7531598624",
+  "checkIn": {
+    "$date": "2026-08-15T00:00:00.000Z"
+  },
+  "checkOut": {
+    "$date": "2026-08-16T00:00:00.000Z"
+  },
+  "status": "cancelled",
+  "paymentStatus": "paid",
+  "refundStatus": "processed",
+  "createdAt": {
+    "$date": "2026-08-01T09:32:56.197Z"
+  },
+  "updatedAt": {
+    "$date": "2026-08-06T15:14:44.790Z"
+  },
+  "__v": 0,
+  "razorpayOrderId": "order_TKSPgr8KJMTE8z",
+  "amountPaid": 2500,
+  "razorpayPaymentId": "pay_TKSPlFRNs9m7jG",
+  "refundAmount": 2500,
+  "razorpayRefundId": "rfnd_TKSRMh34Q4r6j9",
+  "refundedAt": {
+    "$date": "2026-08-01T09:34:31.000Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a6dbd70bd330a4bdc7d1f94"
+  },
+  "roomId": {
+    "$oid": "6a6c39ce22c61b0eb99e707c"
+  },
+  "userId": {
+    "$oid": "6a6c377cffa188846812b07c"
+  },
+  "guestName": "kalwa",
+  "guestPhone": "7531598624",
+  "checkIn": {
+    "$date": "2026-08-13T00:00:00.000Z"
+  },
+  "checkOut": {
+    "$date": "2026-08-16T00:00:00.000Z"
+  },
+  "status": "cancelled",
+  "paymentStatus": "paid",
+  "refundStatus": "processed",
+  "createdAt": {
+    "$date": "2026-08-01T09:33:36.044Z"
+  },
+  "updatedAt": {
+    "$date": "2026-08-06T15:14:44.925Z"
+  },
+  "__v": 0,
+  "razorpayOrderId": "order_TKSQOMPeeTIXyr",
+  "amountPaid": 36000,
+  "razorpayPaymentId": "pay_TKSQV8DGfcK6sl",
+  "refundAmount": 36000,
+  "razorpayRefundId": "rfnd_TKSRZxfyMgQ0TS",
+  "refundedAt": {
+    "$date": "2026-08-01T09:34:43.000Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a6dbe1cbd330a4bdc7d1fce"
+  },
+  "roomId": {
+    "$oid": "6a6b54e74de56a2fb9ad10a9"
+  },
+  "userId": {
+    "$oid": "6a6c377cffa188846812b07c"
+  },
+  "guestName": "kalwa",
+  "guestPhone": "7531598624",
+  "checkIn": {
+    "$date": "2026-08-08T00:00:00.000Z"
+  },
+  "checkOut": {
+    "$date": "2026-08-10T00:00:00.000Z"
+  },
+  "status": "cancelled",
+  "paymentStatus": "paid",
+  "refundStatus": "processed",
+  "createdAt": {
+    "$date": "2026-08-01T09:36:28.856Z"
+  },
+  "updatedAt": {
+    "$date": "2026-08-06T15:14:45.211Z"
+  },
+  "__v": 0,
+  "razorpayOrderId": "order_TKSTR8254cfYkb",
+  "amountPaid": 6000,
+  "razorpayPaymentId": "pay_TKSTVxNpvsWEIu",
+  "refundAmount": 6000,
+  "razorpayRefundId": "rfnd_TKSZzJE8ktML0U",
+  "refundedAt": {
+    "$date": "2026-08-01T09:42:41.000Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a6dbe51bd330a4bdc7d1fe9"
+  },
+  "roomId": {
+    "$oid": "6a6c39ce22c61b0eb99e7077"
+  },
+  "userId": {
+    "$oid": "6a6c377cffa188846812b07c"
+  },
+  "guestName": "kalwa",
+  "guestPhone": "7531598624",
+  "checkIn": {
+    "$date": "2026-08-08T00:00:00.000Z"
+  },
+  "checkOut": {
+    "$date": "2026-08-09T00:00:00.000Z"
+  },
+  "status": "cancelled",
+  "paymentStatus": "paid",
+  "refundStatus": "processed",
+  "createdAt": {
+    "$date": "2026-08-01T09:37:21.682Z"
+  },
+  "updatedAt": {
+    "$date": "2026-08-06T15:14:45.435Z"
+  },
+  "__v": 0,
+  "razorpayOrderId": "order_TKSUMcqmuEax3F",
+  "amountPaid": 1800,
+  "razorpayPaymentId": "pay_TKSURfZ104xJF8",
+  "refundAmount": 1800,
+  "razorpayRefundId": "rfnd_TKSaMikg1pIxG6",
+  "refundedAt": {
+    "$date": "2026-08-01T09:43:02.000Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a6dbe76bd330a4bdc7d1ff6"
+  },
+  "roomId": {
+    "$oid": "6a6c39ce22c61b0eb99e707b"
+  },
+  "userId": {
+    "$oid": "6a6c377cffa188846812b07c"
+  },
+  "guestName": "nice",
+  "guestPhone": "7531598624",
+  "checkIn": {
+    "$date": "2026-08-13T00:00:00.000Z"
+  },
+  "checkOut": {
+    "$date": "2026-08-15T00:00:00.000Z"
+  },
+  "status": "cancelled",
+  "paymentStatus": "paid",
+  "refundStatus": "processed",
+  "createdAt": {
+    "$date": "2026-08-01T09:37:58.008Z"
+  },
+  "updatedAt": {
+    "$date": "2026-08-06T15:14:45.589Z"
+  },
+  "__v": 0,
+  "razorpayOrderId": "order_TKSV0IE7PFFCHs",
+  "amountPaid": 13000,
+  "razorpayPaymentId": "pay_TKSV5ZNFEzGGx8",
+  "razorpayRefundId": "rfnd_TMWu7WsYbq0s89",
+  "refundAmount": 13000,
+  "refundedAt": {
+    "$date": "2026-08-06T15:14:31.000Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a74a1803cd027557a9e6e0a"
+  },
+  "roomId": {
+    "$oid": "6a6b54e74de56a2fb9ad10ac"
+  },
+  "userId": {
+    "$oid": "6a6c377cffa188846812b07c"
+  },
+  "guestName": "kalwa",
+  "guestPhone": "7531598624",
+  "checkIn": {
+    "$date": "2026-08-07T00:00:00.000Z"
+  },
+  "checkOut": {
+    "$date": "2026-08-08T00:00:00.000Z"
+  },
+  "status": "cancelled",
+  "paymentStatus": "paid",
+  "refundStatus": "processed",
+  "createdAt": {
+    "$date": "2026-08-06T15:00:16.704Z"
+  },
+  "updatedAt": {
+    "$date": "2026-08-06T15:14:45.702Z"
+  },
+  "__v": 0,
+  "razorpayOrderId": "order_TMWfC4nkQnt4WV",
+  "amountPaid": 1500,
+  "razorpayPaymentId": "pay_TMWfNCSYeBt8nt",
+  "razorpayRefundId": "rfnd_TMWjZ6AsEQmatF",
+  "refundAmount": 1500,
+  "refundedAt": {
+    "$date": "2026-08-06T15:04:32.000Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a74a1b03cd027557a9e6e17"
+  },
+  "roomId": {
+    "$oid": "6a6c39ce22c61b0eb99e707b"
+  },
+  "userId": {
+    "$oid": "6a6c377cffa188846812b07c"
+  },
+  "guestName": "nice",
+  "guestPhone": "7894564562",
+  "checkIn": {
+    "$date": "2026-08-29T00:00:00.000Z"
+  },
+  "checkOut": {
+    "$date": "2026-08-30T00:00:00.000Z"
+  },
+  "status": "cancelled",
+  "paymentStatus": "paid",
+  "refundStatus": "processed",
+  "createdAt": {
+    "$date": "2026-08-06T15:01:04.323Z"
+  },
+  "updatedAt": {
+    "$date": "2026-08-06T16:41:16.808Z"
+  },
+  "__v": 0,
+  "razorpayOrderId": "order_TMWg1ljsu74Cdh",
+  "amountPaid": 6500,
+  "razorpayPaymentId": "pay_TMWg7A1fxxPeKx",
+  "razorpayRefundId": "rfnd_TMY6aYC9oI7KHX",
+  "refundAmount": 6500,
+  "refundedAt": {
+    "$date": "2026-08-06T16:24:55.791Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a74b9d13cd027557a9e6ea0"
+  },
+  "roomId": {
+    "$oid": "6a6c39ce22c61b0eb99e7077"
+  },
+  "userId": {
+    "$oid": "6a6c377cffa188846812b07c"
+  },
+  "guestName": "kalwa",
+  "guestPhone": "7531598624",
+  "checkIn": {
+    "$date": "2026-08-07T00:00:00.000Z"
+  },
+  "checkOut": {
+    "$date": "2026-08-08T00:00:00.000Z"
+  },
+  "status": "cancelled",
+  "paymentStatus": "paid",
+  "refundStatus": "processed",
+  "createdAt": {
+    "$date": "2026-08-06T16:44:01.235Z"
+  },
+  "updatedAt": {
+    "$date": "2026-08-06T16:56:27.023Z"
+  },
+  "__v": 0,
+  "razorpayOrderId": "order_TMYQm4QGXgAezf",
+  "amountPaid": 1800,
+  "razorpayPaymentId": "pay_TMYQrdcgk5sT12",
+  "razorpayRefundId": "rfnd_TMYS1y1GhWjs1p",
+  "refundAmount": 1800,
+  "refundedAt": {
+    "$date": "2026-08-06T16:45:13.713Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a74b9fa3cd027557a9e6ead"
+  },
+  "roomId": {
+    "$oid": "6a6c39ce22c61b0eb99e707a"
+  },
+  "userId": {
+    "$oid": "6a6c377cffa188846812b07c"
+  },
+  "guestName": "nice",
+  "guestPhone": "7894564562",
+  "checkIn": {
+    "$date": "2026-08-07T00:00:00.000Z"
+  },
+  "checkOut": {
+    "$date": "2026-08-14T00:00:00.000Z"
+  },
+  "status": "cancelled",
+  "paymentStatus": "paid",
+  "refundStatus": "processed",
+  "createdAt": {
+    "$date": "2026-08-06T16:44:42.792Z"
+  },
+  "updatedAt": {
+    "$date": "2026-08-06T16:57:19.056Z"
+  },
+  "__v": 0,
+  "razorpayOrderId": "order_TMYRVTQ0zbCPYr",
+  "amountPaid": 35000,
+  "razorpayPaymentId": "pay_TMYRaOkUjHKkyR",
+  "razorpayRefundId": "rfnd_TMYei4d95POZeh",
+  "refundAmount": 35000,
+  "refundedAt": {
+    "$date": "2026-08-06T16:57:13.912Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a74bb283cd027557a9e6ee0"
+  },
+  "roomId": {
+    "$oid": "6a6c39ce22c61b0eb99e7079"
+  },
+  "userId": {
+    "$oid": "6a6c377cffa188846812b07c"
+  },
+  "guestName": "kalwa",
+  "guestPhone": "7531598624",
+  "checkIn": {
+    "$date": "2026-08-07T00:00:00.000Z"
+  },
+  "checkOut": {
+    "$date": "2026-08-14T00:00:00.000Z"
+  },
+  "status": "cancelled",
+  "paymentStatus": "paid",
+  "refundStatus": "processed",
+  "createdAt": {
+    "$date": "2026-08-06T16:49:44.832Z"
+  },
+  "updatedAt": {
+    "$date": "2026-08-06T16:56:41.586Z"
+  },
+  "__v": 0,
+  "razorpayOrderId": "order_TMYWr4yQFV110c",
+  "amountPaid": 24500,
+  "razorpayPaymentId": "pay_TMYWy6lmOJCccP",
+  "razorpayRefundId": "rfnd_TMYe3APuzjdoEu",
+  "refundAmount": 24500,
+  "refundedAt": {
+    "$date": "2026-08-06T16:56:36.394Z"
+  }
+}]

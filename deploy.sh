@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# BookInn - Complete Automated AWS EC2 Deployment Script
+# BookInn - Complete Automated AWS EC2 Production Deployment Script
 # Target OS: Ubuntu 22.04 LTS (Jammy Jellyfish)
 # Tech Stack: Node.js 22.x, MongoDB 8.x, PM2, Nginx, Express, React + Vite
 # ==============================================================================
@@ -42,10 +42,11 @@ if [ -z "$USER_HOME" ] || [ ! -d "$USER_HOME" ]; then
 fi
 
 echo "[+] Detected EC2 User: $ACTUAL_USER (Home: $USER_HOME)"
-echo "[+] Project Root: $SCRIPT_DIR"
+echo "[+] Project Root Directory: $SCRIPT_DIR"
 
 BACKEND_DIR="$SCRIPT_DIR/hotel-backend"
 FRONTEND_DIR="$SCRIPT_DIR/hotel-frontend"
+MIGRATION_DIR="$SCRIPT_DIR/BookInn-Migration"
 WARNINGS=()
 
 export DEBIAN_FRONTEND=noninteractive
@@ -59,7 +60,7 @@ apt-get update -y -q
 echo "[+] Installing core utilities (git, curl, nginx, gnupg, ca-certificates, build-essential)..."
 apt-get install -y -q git curl nginx gnupg ca-certificates build-essential
 
-# Node.js 22.x Setup (NodeSource)
+# Node.js 22.x Setup (via NodeSource)
 if ! command -v node >/dev/null 2>&1 || [[ "$(node -v)" != v22* ]]; then
     echo "[+] Configuring NodeSource repository for Node.js 22.x..."
     mkdir -p /etc/apt/keyrings
@@ -72,7 +73,7 @@ echo "[+] Node.js version: $(node -v)"
 echo "[+] npm version: $(npm -v)"
 
 # MongoDB 8.x & Tools Setup
-if ! command -v mongod >/dev/null 2>&1; then
+if ! command -v mongod >/dev/null 2>&1 || ! command -v mongoimport >/dev/null 2>&1; then
     echo "[+] Configuring MongoDB 8.0 Community repository..."
     mkdir -p /usr/share/keyrings
     curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-8.0.gpg --yes
@@ -90,17 +91,76 @@ fi
 # ------------------------------------------------------------------------------
 # 4 & 5. Service Management (MongoDB & Nginx)
 # ------------------------------------------------------------------------------
-echo "[+] Enabling and starting MongoDB..."
+echo "[+] Enabling and starting MongoDB service..."
 systemctl daemon-reload
 systemctl enable mongod
 systemctl restart mongod
 
-echo "[+] Enabling and starting Nginx..."
+echo "[+] Enabling and starting Nginx service..."
 systemctl enable nginx
 systemctl restart nginx
 
 # ------------------------------------------------------------------------------
-# 6. Backend Dependencies Installation
+# 6. MongoDB Migration / Seed Data Import
+# ------------------------------------------------------------------------------
+echo "[+] Checking for MongoDB migration data in $MIGRATION_DIR..."
+MIGRATION_FILES_FOUND=0
+MIGRATION_SUCCESS_COUNT=0
+
+if [ -d "$MIGRATION_DIR" ]; then
+    shopt -s nullglob
+    JSON_FILES=("$MIGRATION_DIR"/*.json)
+    shopt -u nullglob
+
+    MIGRATION_FILES_FOUND=${#JSON_FILES[@]}
+
+    if [ "$MIGRATION_FILES_FOUND" -gt 0 ]; then
+        echo "[+] Found $MIGRATION_FILES_FOUND migration seed file(s)."
+        for jfile in "${JSON_FILES[@]}"; do
+            filename=$(basename "$jfile")
+            base="${filename%.json}"
+            # Extract collection name: e.g. bookinn.rooms -> rooms, rooms -> rooms
+            collection_name=$(echo "$base" | sed -e 's/^bookinn\.//')
+            
+            echo "[+] Migrating '$filename' into collection '$collection_name' in database 'bookinn'..."
+            
+            # Detect JSON array format vs newline-delimited JSON
+            IS_JSON_ARRAY=false
+            if head -n 10 "$jfile" | grep -q '^\s*\['; then
+                IS_JSON_ARRAY=true
+            fi
+            
+            # Idempotent upsert by _id so re-running deployment never creates duplicate documents
+            IMPORT_ERR=""
+            if [ "$IS_JSON_ARRAY" = true ]; then
+                if ! IMPORT_ERR=$(mongoimport --db bookinn --collection "$collection_name" --file "$jfile" --jsonArray --mode=upsert --upsertFields=_id 2>&1); then
+                    echo "[-] CRITICAL MIGRATION FAILURE: Failed to import '$filename' into collection '$collection_name'!" >&2
+                    echo "[-] Error output: $IMPORT_ERR" >&2
+                    exit 1
+                fi
+            else
+                if ! IMPORT_ERR=$(mongoimport --db bookinn --collection "$collection_name" --file "$jfile" --mode=upsert --upsertFields=_id 2>&1); then
+                    echo "[-] CRITICAL MIGRATION FAILURE: Failed to import '$filename' into collection '$collection_name'!" >&2
+                    echo "[-] Error output: $IMPORT_ERR" >&2
+                    exit 1
+                fi
+            fi
+            
+            echo "[+] Successfully imported '$filename' -> collection '$collection_name'."
+            MIGRATION_SUCCESS_COUNT=$((MIGRATION_SUCCESS_COUNT + 1))
+        done
+        echo "[+] MongoDB migration finished: $MIGRATION_SUCCESS_COUNT collection(s) synchronized."
+    else
+        echo "[!] No JSON migration files found in $MIGRATION_DIR."
+        WARNINGS+=("No migration JSON files were found in BookInn-Migration/.")
+    fi
+else
+    echo "[!] Migration directory $MIGRATION_DIR not found; skipping migration."
+    WARNINGS+=("BookInn-Migration directory not found; skipping migration import.")
+fi
+
+# ------------------------------------------------------------------------------
+# 7. Backend Dependencies & Environment Setup
 # ------------------------------------------------------------------------------
 echo "[+] Installing backend dependencies..."
 if [ -d "$BACKEND_DIR" ]; then
@@ -111,14 +171,11 @@ else
     exit 1
 fi
 
-# ------------------------------------------------------------------------------
-# 7. Configure Backend Environment (.env)
-# ------------------------------------------------------------------------------
 echo "[+] Configuring backend .env file..."
 PORT_VAL="${PORT:-5000}"
 MONGO_URI_VAL="${MONGO_URI:-mongodb://localhost:27017/bookinn}"
 
-# Determine JWT Secret
+# Determine JWT Secret (User Data > Existing .env > Secure Generated)
 if [ -n "$JWT_SECRET" ]; then
     JWT_SECRET_VAL="$JWT_SECRET"
 elif [ -f "$BACKEND_DIR/.env" ] && grep -q '^JWT_SECRET=' "$BACKEND_DIR/.env" && [ -n "$(grep '^JWT_SECRET=' "$BACKEND_DIR/.env" | cut -d= -f2-)" ] && ! grep -q '^JWT_SECRET=change_this' "$BACKEND_DIR/.env"; then
@@ -160,56 +217,11 @@ if [ -z "$RAZORPAY_KEY_ID_VAL" ] || [ -z "$RAZORPAY_KEY_SECRET_VAL" ]; then
 fi
 
 # ------------------------------------------------------------------------------
-# 8. MongoDB Seed Data Import (Optional)
-# ------------------------------------------------------------------------------
-echo "[+] Checking for initial MongoDB seed data..."
-SEED_IMPORTED=false
-
-import_seed_data() {
-    local file_path="$1"
-    local collection_name="$2"
-    if [ -f "$file_path" ]; then
-        echo "[+] Importing seed data: $file_path -> collection: $collection_name"
-        if command -v mongoimport >/dev/null 2>&1; then
-            # Test if JSON array
-            if head -n 5 "$file_path" | grep -q '^\s*\['; then
-                mongoimport --db bookinn --collection "$collection_name" --file "$file_path" --jsonArray --mode=upsert 2>/dev/null || \
-                mongoimport --db bookinn --collection "$collection_name" --file "$file_path" --jsonArray 2>/dev/null || true
-            else
-                mongoimport --db bookinn --collection "$collection_name" --file "$file_path" --mode=upsert 2>/dev/null || \
-                mongoimport --db bookinn --collection "$collection_name" --file "$file_path" 2>/dev/null || true
-            fi
-            SEED_IMPORTED=true
-        else
-            echo "[-] mongoimport command not available; skipping seed import."
-        fi
-    fi
-}
-
-# Scan potential seed locations
-SEED_DIRS=("$SCRIPT_DIR/BookInn-Migration" "$SCRIPT_DIR/seeds" "$SCRIPT_DIR/migration" "$SCRIPT_DIR/data")
-for sdir in "${SEED_DIRS[@]}"; do
-    if [ -d "$sdir" ]; then
-        for jfile in "$sdir"/*.json; do
-            if [ -f "$jfile" ]; then
-                base=$(basename "$jfile" .json)
-                coll=$(echo "$base" | sed -e 's/^bookinn\.//')
-                import_seed_data "$jfile" "$coll"
-            fi
-        done
-    fi
-done
-
-if [ "$SEED_IMPORTED" = false ]; then
-    WARNINGS+=("No initial MongoDB JSON seed data found in migration/seed directories. Database 'bookinn' is initialized and ready for new data.")
-fi
-
-# ------------------------------------------------------------------------------
-# 9. Frontend Dependencies, Environment & Production Build
+# 8. Frontend Dependencies, Environment & Production Build
 # ------------------------------------------------------------------------------
 echo "[+] Configuring and building frontend..."
 
-# Detect Public IP dynamically
+# Detect Public IP dynamically via AWS IMDSv2 with fallback
 TOKEN=$(curl -s -S -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 60" 2>/dev/null || true)
 PUBLIC_IP=""
 if [ -n "$TOKEN" ]; then
@@ -239,15 +251,22 @@ EOF
     
     npm install
     npm run build
+    
+    # Verify dist/index.html exists before Nginx configuration
+    if [ ! -f "$FRONTEND_DIR/dist/index.html" ]; then
+        echo "[-] CRITICAL: Frontend production build failed. Expected '$FRONTEND_DIR/dist/index.html' not found!" >&2
+        exit 1
+    fi
+    echo "[+] Frontend build verified: '$FRONTEND_DIR/dist/index.html' exists."
 else
     echo "[-] Error: Frontend directory $FRONTEND_DIR not found!" >&2
     exit 1
 fi
 
 # ------------------------------------------------------------------------------
-# 10. Nginx Configuration & Permissions
+# 9. Nginx Reverse Proxy & Permissions Setup
 # ------------------------------------------------------------------------------
-echo "[+] Configuring Nginx reverse proxy and SPA routing..."
+echo "[+] Configuring Nginx reverse proxy and SPA fallback routing..."
 
 NGINX_CONF="/etc/nginx/sites-available/bookinn"
 cat > "$NGINX_CONF" <<EOF
@@ -259,7 +278,7 @@ server {
     root $FRONTEND_DIR/dist;
     index index.html;
 
-    # React Router SPA Handling
+    # React Router SPA Routing
     location / {
         try_files \$uri \$uri/ /index.html;
     }
@@ -300,12 +319,12 @@ chmod 755 "$SCRIPT_DIR"
 chmod 755 "$FRONTEND_DIR"
 chmod -R 755 "$FRONTEND_DIR/dist"
 
-# Validate Nginx config
+# Validate Nginx configuration syntax before reloading
 nginx -t
 systemctl reload nginx
 
 # ------------------------------------------------------------------------------
-# 11. Start Backend with PM2
+# 10. PM2 Process Management (Running as Non-Root User)
 # ------------------------------------------------------------------------------
 echo "[+] Starting backend with PM2 under user: $ACTUAL_USER..."
 
@@ -322,11 +341,11 @@ env PATH="$PATH" pm2 startup systemd -u "$ACTUAL_USER" --hp "$USER_HOME" --silen
 sudo -u "$ACTUAL_USER" -i env PATH="$PATH" pm2 save
 
 # ------------------------------------------------------------------------------
-# 12. Validations & Health Checks (Strict Failure on Critical Issues)
+# 11. Robust Validations & Health Checks
 # ------------------------------------------------------------------------------
 echo "[+] Running deployment health checks..."
 
-# Check MongoDB service
+# 1. Check MongoDB service
 if ! systemctl is-active --quiet mongod; then
     echo "[-] CRITICAL: MongoDB service (mongod) is not active!" >&2
     systemctl status mongod --no-pager || true
@@ -334,7 +353,16 @@ if ! systemctl is-active --quiet mongod; then
 fi
 echo "[+] MongoDB service: ACTIVE"
 
-# Check Nginx service
+# Check MongoDB responsiveness
+if command -v mongosh >/dev/null 2>&1; then
+    if ! mongosh --quiet --eval "db.adminCommand('ping')" >/dev/null 2>&1; then
+        echo "[-] CRITICAL: MongoDB service is running but not responding to ping!" >&2
+        exit 1
+    fi
+    echo "[+] MongoDB connection ping: OK"
+fi
+
+# 2. Check Nginx service
 if ! systemctl is-active --quiet nginx; then
     echo "[-] CRITICAL: Nginx service is not active!" >&2
     systemctl status nginx --no-pager || true
@@ -342,17 +370,48 @@ if ! systemctl is-active --quiet nginx; then
 fi
 echo "[+] Nginx service: ACTIVE"
 
-# Check PM2 backend process
-PM2_STATUS=$(sudo -u "$ACTUAL_USER" -i env PATH="$PATH" pm2 jlist 2>/dev/null | grep -o '"name":"bookinn-backend","pm_id":[0-9]*,"monit":{[^}]*},"pm2_env":{"status":"online"' || true)
-if [ -z "$PM2_STATUS" ]; then
-    echo "[-] CRITICAL: PM2 process 'bookinn-backend' is not in online status!" >&2
+# 3. Robust PM2 Status Check (Independent of JSON Key Ordering)
+echo "[+] Verifying PM2 process 'bookinn-backend' status..."
+PM2_ONLINE=false
+
+for attempt in {1..10}; do
+    # Method A: Parse JSON directly with Node.js
+    STATUS_NODE=$(sudo -u "$ACTUAL_USER" -i env PATH="$PATH" node -e '
+      try {
+        const { execSync } = require("child_process");
+        const list = JSON.parse(execSync("pm2 jlist", { encoding: "utf8" }));
+        const proc = list.find(p => p.name === "bookinn-backend");
+        if (proc && proc.pm2_env && proc.pm2_env.status === "online") {
+          process.stdout.write("online");
+        } else if (proc) {
+          process.stdout.write(proc.pm2_env ? proc.pm2_env.status : "unknown");
+        } else {
+          process.stdout.write("not_found");
+        }
+      } catch (e) {
+        process.stdout.write("error");
+      }
+    ' 2>/dev/null || echo "error")
+
+    # Method B: Direct pm2 describe check
+    STATUS_DESCRIBE=$(sudo -u "$ACTUAL_USER" -i env PATH="$PATH" pm2 describe bookinn-backend 2>/dev/null | grep -i "status" | grep -iq "online" && echo "online" || echo "not_online")
+
+    if [ "$STATUS_NODE" = "online" ] || [ "$STATUS_DESCRIBE" = "online" ]; then
+        PM2_ONLINE=true
+        break
+    fi
+    sleep 1
+done
+
+if [ "$PM2_ONLINE" != true ]; then
+    echo "[-] CRITICAL: PM2 process 'bookinn-backend' is not online! (Status: node='$STATUS_NODE', describe='$STATUS_DESCRIBE')" >&2
     sudo -u "$ACTUAL_USER" -i env PATH="$PATH" pm2 status || true
-    sudo -u "$ACTUAL_USER" -i env PATH="$PATH" pm2 logs bookinn-backend --lines 20 --nostream || true
+    sudo -u "$ACTUAL_USER" -i env PATH="$PATH" pm2 logs bookinn-backend --lines 25 --nostream || true
     exit 1
 fi
 echo "[+] PM2 process 'bookinn-backend': ONLINE"
 
-# Health check with retry loop (allowing Express DB connection to settle)
+# 4. HTTP Endpoints Verification (with retry loop for Express & MongoDB settle)
 echo "[+] Verifying HTTP endpoints..."
 BACKEND_OK=false
 NGINX_API_OK=false
@@ -381,21 +440,21 @@ if [ "$BACKEND_OK" != true ]; then
     sudo -u "$ACTUAL_USER" -i env PATH="$PATH" pm2 logs bookinn-backend --lines 25 --nostream || true
     exit 1
 fi
-echo "[+] Backend endpoint check: OK (HTTP 200)"
+echo "[+] Backend endpoint check (http://127.0.0.1:$PORT_VAL/api/rooms): OK (HTTP 200)"
 
 if [ "$NGINX_API_OK" != true ]; then
     echo "[-] CRITICAL: Nginx reverse proxy endpoint http://127.0.0.1/api/rooms returned HTTP $HTTP_API (expected 200)!" >&2
     tail -n 25 /var/log/nginx/error.log || true
     exit 1
 fi
-echo "[+] Nginx API proxy check: OK (HTTP 200)"
+echo "[+] Nginx API proxy check (http://127.0.0.1/api/rooms): OK (HTTP 200)"
 
 if [ "$FRONTEND_OK" != true ]; then
     echo "[-] CRITICAL: Nginx frontend endpoint http://127.0.0.1/ returned HTTP $HTTP_FRONTEND (expected 200)!" >&2
     tail -n 25 /var/log/nginx/error.log || true
     exit 1
 fi
-echo "[+] Nginx frontend SPA check: OK (HTTP 200)"
+echo "[+] Nginx frontend SPA check (http://127.0.0.1/): OK (HTTP 200)"
 
 DISPLAY_IP="$PUBLIC_IP"
 if [ "$DISPLAY_IP" = "127.0.0.1" ] || [ "$DISPLAY_IP" = "_" ]; then
@@ -403,7 +462,7 @@ if [ "$DISPLAY_IP" = "127.0.0.1" ] || [ "$DISPLAY_IP" = "_" ]; then
 fi
 
 # ------------------------------------------------------------------------------
-# 13. Final Deployment Summary
+# 12. Final Deployment Summary
 # ------------------------------------------------------------------------------
 echo ""
 echo "========================================"

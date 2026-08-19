@@ -1,0 +1,160 @@
+[{
+  "_id": {
+    "$oid": "6a6b54e74de56a2fb9ad10a9"
+  },
+  "number": "101",
+  "type": "Deluxe",
+  "price": 3000,
+  "capacity": 2,
+  "createdAt": {
+    "$date": "2026-07-30T13:43:03.933Z"
+  },
+  "updatedAt": {
+    "$date": "2026-07-30T13:43:03.933Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6a6b54e74de56a2fb9ad10ac"
+  },
+  "number": "202",
+  "type": "Single",
+  "price": 1500,
+  "capacity": 1,
+  "createdAt": {
+    "$date": "2026-07-30T13:43:03.943Z"
+  },
+  "updatedAt": {
+    "$date": "2026-07-30T13:43:03.943Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "6a6c39ce22c61b0eb99e7077"
+  },
+  "number": "102",
+  "__v": 0,
+  "capacity": 1,
+  "createdAt": {
+    "$date": "2026-07-31T05:59:42.228Z"
+  },
+  "price": 1800,
+  "type": "Single",
+  "updatedAt": {
+    "$date": "2026-07-31T05:59:42.228Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a6c39ce22c61b0eb99e7078"
+  },
+  "number": "103",
+  "__v": 0,
+  "capacity": 2,
+  "createdAt": {
+    "$date": "2026-07-31T05:59:42.243Z"
+  },
+  "price": 2500,
+  "type": "Double",
+  "updatedAt": {
+    "$date": "2026-07-31T05:59:42.243Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a6c39ce22c61b0eb99e7079"
+  },
+  "number": "201",
+  "__v": 0,
+  "capacity": 2,
+  "createdAt": {
+    "$date": "2026-07-31T05:59:42.244Z"
+  },
+  "price": 3500,
+  "type": "Deluxe",
+  "updatedAt": {
+    "$date": "2026-07-31T05:59:42.244Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a6c39ce22c61b0eb99e707a"
+  },
+  "number": "203",
+  "__v": 0,
+  "capacity": 3,
+  "createdAt": {
+    "$date": "2026-07-31T05:59:42.246Z"
+  },
+  "price": 5000,
+  "type": "Executive Suite",
+  "updatedAt": {
+    "$date": "2026-07-31T05:59:42.246Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a6c39ce22c61b0eb99e707b"
+  },
+  "number": "301",
+  "__v": 0,
+  "capacity": 4,
+  "createdAt": {
+    "$date": "2026-07-31T05:59:42.247Z"
+  },
+  "price": 6500,
+  "type": "Family Suite",
+  "updatedAt": {
+    "$date": "2026-07-31T05:59:42.247Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a6c39ce22c61b0eb99e707c"
+  },
+  "number": "302",
+  "__v": 0,
+  "capacity": 4,
+  "createdAt": {
+    "$date": "2026-07-31T05:59:42.248Z"
+  },
+  "price": 12000,
+  "type": "Penthouse",
+  "updatedAt": {
+    "$date": "2026-08-06T14:42:07.682Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a749d3f3cd027557a9e6de2"
+  },
+  "number": "PENT-7692-ADD1",
+  "type": "Penthouse",
+  "price": 12000,
+  "capacity": 4,
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-08-06T14:42:07.693Z"
+  },
+  "updatedAt": {
+    "$date": "2026-08-06T14:42:07.693Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6a749d3f3cd027557a9e6de3"
+  },
+  "number": "PENT-7692-ADD2",
+  "type": "Penthouse",
+  "price": 12000,
+  "capacity": 4,
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-08-06T14:42:07.693Z"
+  },
+  "updatedAt": {
+    "$date": "2026-08-06T14:42:07.693Z"
+  }
+}]
