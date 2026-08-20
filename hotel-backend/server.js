@@ -1,4 +1,6 @@
 require("dotenv").config();
+const path = require("path");
+const fs = require("fs");
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
@@ -13,6 +15,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Ensure uploads directory exists and serve static uploads
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use("/uploads", express.static(uploadsDir));
+
 app.use("/api/auth", authRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/bookings", bookingRoutes);
@@ -25,3 +34,4 @@ connectDB().then(() => {
     console.log(`Server running on port ${process.env.PORT || 5000}`)
   );
 });
+

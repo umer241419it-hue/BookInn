@@ -296,6 +296,16 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
+    # Uploaded Media Static Proxy
+    location /uploads/ {
+        proxy_pass http://127.0.0.1:$PORT_VAL/uploads/;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
     # Static Asset Caching
     location ~* \.(?:css|js|jpg|jpeg|gif|png|ico|cur|gz|svg|svgz|mp4|ogg|ogv|webm|htc|woff|woff2|ttf)\$ {
         expires 1M;

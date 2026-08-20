@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pencil, Trash2, Users, CheckCircle2, Ban, ChevronLeft, ChevronRight, Hotel, Calendar } from 'lucide-react';
 import { formatPriceINR } from '../utils/formatCurrency';
 import { useAuth } from '../context/AuthContext';
+import { getFullImageUrl } from '../utils/imageHelper';
 
 const DEFAULT_ROOM_IMAGES = {
   suite: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80',
@@ -48,13 +49,14 @@ const RoomCard = ({ room, hasDates = false, onBookRoom, onEditRoom, onDeleteRoom
       {/* ROOM IMAGE CAROUSEL / COVER */}
       <div style={{ position: 'relative', width: '100%', height: '210px', backgroundColor: '#f1f5f9', overflow: 'hidden' }}>
         <img
-          src={displayImages[currentImgIndex] || getFallbackImage(room.type)}
+          src={getFullImageUrl(displayImages[currentImgIndex]) || getFallbackImage(room.type)}
           alt={`${room.type} Room`}
           style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'all 0.3s ease' }}
           onError={(e) => {
             e.target.src = getFallbackImage(room.type);
           }}
         />
+
 
         {/* Carousel Navigation Arrows if multiple images */}
         {displayImages.length > 1 && (

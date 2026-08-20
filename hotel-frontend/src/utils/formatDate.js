@@ -28,3 +28,6 @@ export const formatDateOnly = (dateStr) => {
     year: 'numeric',
   });
 };
+
+export const formatDate = formatDateOnly;
+

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Copy, Check, RotateCcw, Hotel, DoorClosed, CalendarCheck, CalendarDays, Ban, Calendar, Filter, AlertTriangle, CreditCard, X, BedDouble, IndianRupee } from 'lucide-react';
+import { RotateCcw, Hotel, DoorClosed, CalendarCheck, CalendarDays, Ban, Calendar, Filter, AlertTriangle, CreditCard, X, BedDouble, IndianRupee } from 'lucide-react';
 
 import { getAllBookings, cancelBooking } from '../api/bookings';
 import { getRoomStats, getAllRooms } from '../api/rooms';
@@ -8,7 +8,8 @@ import { formatPriceINR } from '../utils/formatCurrency';
 import { formatDateTime } from '../utils/formatDate';
 import BookingStatusGroup from '../components/BookingStatusBadge';
 import Logo from '../components/Logo';
-
+import CopyButton from '../components/CopyButton';
+import CancelBookingModal from '../components/CancelBookingModal';
 
 const AdminBookingsPage = () => {
   const [bookings, setBookings] = useState([]);
@@ -24,7 +25,7 @@ const AdminBookingsPage = () => {
     setSearchParams({ tab: paramValue }, { replace: true });
   };
 
-  const [copiedId, setCopiedId] = useState('');
+  const [bookingToCancel, setBookingToCancel] = useState(null);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -122,46 +123,27 @@ const AdminBookingsPage = () => {
 
 
 
-  const handleCopy = (text) => {
-    if (!text) return;
-    navigator.clipboard.writeText(text);
-    setCopiedId(text);
-    setTimeout(() => setCopiedId(''), 2000);
-  };
-
   const truncateId = (id) => {
     if (!id) return '';
     if (id.length <= 10) return id;
     return `${id.slice(0, 6)}...${id.slice(-4)}`;
   };
 
-  const handleCancelBooking = async (booking) => {
-    const isPaid = booking.paymentStatus === 'paid';
-    let amount = booking.amountPaid;
-    if (!amount && booking.roomId && booking.roomId.price) {
-      const checkInDate = new Date(booking.checkIn);
-      const checkOutDate = new Date(booking.checkOut);
-      const nights = Math.max(1, Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)));
-      amount = nights * booking.roomId.price;
-    }
+  const handleOpenCancelModal = (booking) => {
+    setBookingToCancel(booking);
+  };
 
-    const confirmPrompt = isPaid
-      ? `ADMIN ACTION: Cancel booking for ${booking.guestName} and issue ${formatPriceINR(amount || 0)} Razorpay refund?`
-      : `ADMIN ACTION: Cancel booking for ${booking.guestName}?`;
-
-    if (!window.confirm(confirmPrompt)) return;
-
+  const handleConfirmCancel = async (booking) => {
     setError('');
     setSuccessMsg('');
-    try {
-      const res = await cancelBooking(booking._id);
-      setSuccessMsg(res.message || 'Booking cancelled and refund processed.');
-      fetchBookings();
-      fetchStats();
-    } catch (err) {
-      console.error('Admin cancel error:', err);
-      setError(err.response?.data?.error || 'Failed to cancel booking.');
-    }
+    const res = await cancelBooking(booking._id);
+    const refundMsg = res.refund
+      ? `Booking cancelled. Razorpay refund (${formatPriceINR(res.refund.amount)}) initiated (${res.refund.status}).`
+      : res.message || 'Booking cancelled successfully.';
+
+    setSuccessMsg(refundMsg);
+    await fetchBookings();
+    await fetchStats();
   };
 
   const formatDate = (dateStr) => {
@@ -558,28 +540,14 @@ const AdminBookingsPage = () => {
                     {booking.razorpayOrderId && (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                         <strong>Order ID:</strong> <code>{truncateId(booking.razorpayOrderId)}</code>
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(booking.razorpayOrderId)}
-                          title="Copy Order ID"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '0.75rem', color: copiedId === booking.razorpayOrderId ? '#16a34a' : '#6366f1', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
-                        >
-                          {copiedId === booking.razorpayOrderId ? <><Check size={12} aria-hidden="true" /> Copied</> : <Copy size={12} aria-hidden="true" />}
-                        </button>
+                        <CopyButton text={booking.razorpayOrderId} label="Order ID" />
                       </span>
                     )}
 
                     {booking.razorpayPaymentId && (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
                         <strong>Payment ID:</strong> <code>{truncateId(booking.razorpayPaymentId)}</code>
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(booking.razorpayPaymentId)}
-                          title="Copy Payment ID"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '0.75rem', color: copiedId === booking.razorpayPaymentId ? '#16a34a' : '#6366f1', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
-                        >
-                          {copiedId === booking.razorpayPaymentId ? <><Check size={12} aria-hidden="true" /> Copied</> : <Copy size={12} aria-hidden="true" />}
-                        </button>
+                        <CopyButton text={booking.razorpayPaymentId} label="Payment ID" />
                       </span>
                     )}
                   </div>
@@ -592,14 +560,7 @@ const AdminBookingsPage = () => {
                       {booking.razorpayRefundId && (
                         <p style={{ margin: '0.2rem 0 0 0', color: '#334155' }}>
                           <strong>Refund ID:</strong> <code>{truncateId(booking.razorpayRefundId)}</code>
-                          <button
-                            type="button"
-                            onClick={() => handleCopy(booking.razorpayRefundId)}
-                            title="Copy Refund ID"
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: '0.75rem', color: copiedId === booking.razorpayRefundId ? '#16a34a' : '#6366f1', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
-                          >
-                            {copiedId === booking.razorpayRefundId ? <><Check size={12} aria-hidden="true" /> Copied</> : <Copy size={12} aria-hidden="true" />}
-                          </button>
+                          <CopyButton text={booking.razorpayRefundId} label="Refund ID" />
                         </p>
                       )}
                       {booking.refundedAt && (
@@ -616,7 +577,7 @@ const AdminBookingsPage = () => {
                     <button
                       type="button"
                       className="btn-cancel-booking"
-                      onClick={() => handleCancelBooking(booking)}
+                      onClick={() => handleOpenCancelModal(booking)}
                     >
                       Admin Cancel
                     </button>
@@ -627,6 +588,15 @@ const AdminBookingsPage = () => {
           })}
         </div>
       )}
+
+      {/* Admin Booking Cancellation Modal Dialog */}
+      <CancelBookingModal
+        isOpen={Boolean(bookingToCancel)}
+        onClose={() => setBookingToCancel(null)}
+        onConfirm={handleConfirmCancel}
+        booking={bookingToCancel}
+        isAdmin={true}
+      />
     </div>
   );
 };

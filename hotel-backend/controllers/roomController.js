@@ -349,6 +349,25 @@ const deleteRoomType = async (req, res) => {
   }
 };
 
+// POST /api/rooms/upload (Admin: Upload room images from device)
+const uploadRoomImages = async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: "No image files provided for upload." });
+    }
+
+    const imageUrls = req.files.map((file) => `/uploads/${file.filename}`);
+
+    res.status(200).json({
+      success: true,
+      message: `${imageUrls.length} image(s) uploaded successfully.`,
+      imageUrls,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getAllRooms,
   getAvailableRooms,
@@ -356,5 +375,7 @@ module.exports = {
   createRoomType,
   updateRoomType,
   deleteRoomType,
+  uploadRoomImages,
 };
+
 

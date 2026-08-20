@@ -32,3 +32,14 @@ export const deleteRoomType = async (type) => {
   return response.data;
 };
 
+export const uploadRoomImages = async (formData) => {
+  const response = await api.post('/rooms/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+
+

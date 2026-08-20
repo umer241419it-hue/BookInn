@@ -1,22 +1,48 @@
 /**
  * Central error-handling middleware.
- *
- * Express recognises a middleware with 4 params as an error handler.
- * Any time you call next(error) in a controller, Express skips to here.
  */
 const errorHandler = (err, req, res, next) => {
-  // Mongoose validation errors come with err.name === 'ValidationError'
-  // Mongoose cast errors (bad ObjectId) come with err.name === 'CastError'
-  // For now, a simple handler — you can refine this later.
+  // Handle Multer upload errors
+  if (err.name === "MulterError") {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({
+        success: false,
+        error: "File size exceeds the 5MB limit. Please upload smaller images.",
+        message: "File size exceeds the 5MB limit. Please upload smaller images.",
+      });
+    }
+    if (err.code === "LIMIT_FILE_COUNT") {
+      return res.status(400).json({
+        success: false,
+        error: "Maximum 10 images can be uploaded at a time.",
+        message: "Maximum 10 images can be uploaded at a time.",
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      error: err.message,
+      message: err.message,
+    });
+  }
+
+  // Handle custom upload/validation errors
+  if (err.message && (err.message.includes("Invalid file type") || err.message.includes("allowed"))) {
+    return res.status(400).json({
+      success: false,
+      error: err.message,
+      message: err.message,
+    });
+  }
 
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
 
   res.status(statusCode).json({
     success: false,
+    error: err.message || "Server Error",
     message: err.message || "Server Error",
-    // Only show the stack trace in development
     stack: process.env.NODE_ENV === "production" ? undefined : err.stack,
   });
 };
 
 module.exports = errorHandler;
+
