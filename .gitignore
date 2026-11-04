@@ -3,3 +3,6 @@ node_modules/
 dist/
 .DS_Store
 *.log
+UserScript
+uploads/
+hotel-backend/test-assets/

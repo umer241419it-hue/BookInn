@@ -1,6 +1,9 @@
 const Room = require("../models/Room");
 const Booking = require("../models/Booking");
 const { getBookedRoomIds } = require("../utils/availability");
+const { getGridFSBucket } = require("../config/gridfs");
+const { ObjectId } = require("mongoose").mongo;
+const crypto = require("crypto");
 
 /**
  * Helper to group array of Room documents by type into category summaries.
@@ -49,6 +52,58 @@ const groupRoomsByType = (rooms, bookedRoomIds = []) => {
   }, {});
 
   return Object.values(grouped);
+};
+
+/**
+ * Helper: upload a file buffer to GridFS.
+ * Returns the GridFS file _id (ObjectId) on success.
+ */
+const uploadBufferToGridFS = (bucket, buffer, filename, contentType) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = bucket.openUploadStream(filename, { contentType });
+    uploadStream.on("finish", () => resolve(uploadStream.id));
+    uploadStream.on("error", reject);
+    uploadStream.end(buffer);
+  });
+};
+
+/**
+ * Helper: delete GridFS files referenced by an array of image URLs.
+ *
+ * Only processes URLs matching the `/api/rooms/images/<fileId>` pattern.
+ * Leaves external URLs (http/https) and legacy `/uploads/...` paths untouched.
+ *
+ * Reference-count safety: before deleting each GridFS file, checks whether any
+ * OTHER Room document still references the same URL. If so, skips the delete
+ * so that the file remains available to those rooms. This handles the case
+ * where the same GridFS URL appears in multiple room records.
+ */
+const deleteGridFSImages = async (images) => {
+  if (!Array.isArray(images) || images.length === 0) return;
+  const bucket = getGridFSBucket();
+  // Deduplicate the list — a URL need only be checked once
+  const uniqueUrls = [...new Set(images.filter(
+    (u) => typeof u === "string" && u.startsWith("/api/rooms/images/")
+  ))];
+  for (const url of uniqueUrls) {
+    const fileIdStr = url.split("/api/rooms/images/")[1];
+    try {
+      // Check whether any Room document still references this URL
+      const refCount = await Room.countDocuments({ images: url });
+      if (refCount > 0) {
+        // Another room still holds this reference — do not delete
+        console.log(
+          `GridFS: skipping delete of ${fileIdStr} — still referenced by ${refCount} room document(s)`
+        );
+        continue;
+      }
+      const fileId = new ObjectId(fileIdStr);
+      await bucket.delete(fileId);
+    } catch (err) {
+      // Log but don't throw — file may already be gone or ID is malformed
+      console.warn(`GridFS delete warning for ${fileIdStr}:`, err.message);
+    }
+  }
 };
 
 // GET /api/rooms (Category summary list)
@@ -257,11 +312,20 @@ const updateRoomType = async (req, res) => {
       }
     }
 
+    // Capture old images (all rooms in a type share the same images array) before update
+    const oldImages = existingRooms[0].images || [];
+
     // Update details (type name, price, capacity, images) across all existing rooms
     await Room.updateMany(
       { type: decodedOriginalType },
       { $set: { type: trimmedNewType, price: priceNum, capacity: capacityNum, images: imagesArray } }
     );
+
+    // Clean up GridFS files for images that were removed by the admin
+    const removedImages = oldImages.filter((url) => !imagesArray.includes(url));
+    if (removedImages.length > 0) {
+      await deleteGridFSImages(removedImages);
+    }
 
     const currentCount = existingRooms.length;
 
@@ -340,6 +404,12 @@ const deleteRoomType = async (req, res) => {
       });
     }
 
+    // Collect all GridFS-stored images from all rooms of this type, deduplicate, then delete.
+    // Rooms in the same type share identical image URLs — deduplication prevents redundant
+    // GridFS deletes (each ObjectId must only be deleted once).
+    const allImages = [...new Set(rooms.flatMap((r) => r.images || []))];
+    await deleteGridFSImages(allImages);
+
     // Delete physical rooms
     await Room.deleteMany({ type: decodedType });
 
@@ -349,14 +419,24 @@ const deleteRoomType = async (req, res) => {
   }
 };
 
-// POST /api/rooms/upload (Admin: Upload room images from device)
+// POST /api/rooms/upload (Admin: Upload room images to GridFS)
 const uploadRoomImages = async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: "No image files provided for upload." });
     }
 
-    const imageUrls = req.files.map((file) => `/uploads/${file.filename}`);
+    const bucket = getGridFSBucket();
+    const imageUrls = [];
+
+    for (const file of req.files) {
+      const ext = file.originalname.split(".").pop().toLowerCase() || "jpg";
+      const randomHex = crypto.randomBytes(6).toString("hex");
+      const filename = `room-${Date.now()}-${randomHex}.${ext}`;
+
+      const fileId = await uploadBufferToGridFS(bucket, file.buffer, filename, file.mimetype);
+      imageUrls.push(`/api/rooms/images/${fileId.toString()}`);
+    }
 
     res.status(200).json({
       success: true,
@@ -368,6 +448,49 @@ const uploadRoomImages = async (req, res) => {
   }
 };
 
+// GET /api/rooms/images/:fileId (Public: Stream image from GridFS)
+const getImage = async (req, res) => {
+  try {
+    const { fileId } = req.params;
+
+    let objectId;
+    try {
+      objectId = new ObjectId(fileId);
+    } catch {
+      return res.status(400).json({ error: "Invalid image ID." });
+    }
+
+    const bucket = getGridFSBucket();
+
+    // Check if file exists
+    const files = await bucket.find({ _id: objectId }).toArray();
+    if (!files || files.length === 0) {
+      return res.status(404).json({ error: "Image not found." });
+    }
+
+    const file = files[0];
+
+    // Set headers
+    res.set("Content-Type", file.contentType || "image/jpeg");
+    res.set("Cache-Control", "public, max-age=31536000, immutable");
+    res.set("Content-Length", file.length);
+
+    // Stream the file
+    const downloadStream = bucket.openDownloadStream(objectId);
+    downloadStream.on("error", (err) => {
+      console.error("GridFS stream error:", err.message);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to stream image." });
+      }
+    });
+    downloadStream.pipe(res);
+  } catch (error) {
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+};
+
 module.exports = {
   getAllRooms,
   getAvailableRooms,
@@ -376,6 +499,6 @@ module.exports = {
   updateRoomType,
   deleteRoomType,
   uploadRoomImages,
+  getImage,
+  deleteGridFSImages,
 };
-
-
