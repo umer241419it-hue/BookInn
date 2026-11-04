@@ -37,11 +37,15 @@ export RAZORPAY_KEY_ID=""
 export RAZORPAY_KEY_SECRET=""
 export JWT_SECRET=""
 
-# Prepare directory
+# Create application directory
 mkdir -p /home/ubuntu/apps
 chown -R ubuntu:ubuntu /home/ubuntu/apps
 
-# Clone repository
+# Install Git
+apt-get update -y
+apt-get install -y git
+
+# Clone or pull repository
 if [ ! -d "$APP_DIR/.git" ]; then
     sudo -u ubuntu git clone "$REPO_URL" "$APP_DIR"
 else
@@ -49,10 +53,13 @@ else
     sudo -u ubuntu git pull origin main
 fi
 
-# Run deployment
+# Run complete automated deployment
 cd "$APP_DIR"
 chmod +x deploy.sh
-sudo -E ./deploy.sh
+
+./deploy.sh
+
+exit 0
 ```
 
 #### Method B: Manual SSH Deployment
